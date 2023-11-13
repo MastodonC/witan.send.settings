@@ -1,0 +1,14 @@
+{:paths   ["src" "resources"]
+ :deps    {org.clojure/clojure {:mvn/version "1.11.1"}}
+ :aliases {:dev {:extra-paths ["notebooks"]
+                 :extra-deps  {org.clojure/clojure        {:mvn/version "1.11.1"}
+                               techascent/tech.ml.dataset {:mvn/version "7.014"}
+                               scicloj/tablecloth         {:mvn/version "7.014"
+                                                           :exclusions  [techascent/tech.ml.dataset
+                                                                         org.apache.poi/poi-ooxml-schemas
+                                                                         org.apache.poi/poi
+                                                                         org.apache.poi/poi-ooxml]}
+                               io.github.nextjournal/clerk {:mvn/version "0.15.957"} ;; Clerk only required by demo notebooks.
+                               mastodonc/gias              {:local/root "../witan.gias/"
+                                                            #_#_:git/url "https://github.com/MastodonC/witan.gias.git"
+                                                            #_#_:sha     "e6917079b4bba209a04ee9b5eb9a373931a99996"}}}}}
