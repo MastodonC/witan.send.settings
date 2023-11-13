@@ -337,3 +337,62 @@
       )
 
   )
+
+
+
+
+
+;;; # Setting Mappings
+;;; ## SEN2 Establishments to `:estab-cat`
+;;; ### GIAS Establishments
+;;; #### GIAS Establishment Type to `:estab-cat`
+(def estab-type-keys [:type-of-establishment-name
+                      :sen-unit-indicator
+	              :resourced-provision-indicator
+	              :sen-setting])
+
+(defn estab-type-to-estab-cat-ds
+  "Dataset mapping Estab Types to `:estab-cat` Estab Categories categories.
+   Read from CSV file specified by `::estab-type-to-estab-cat-filename`, `::dir` & `::resource-dir` vals,
+   unless supplied in truthy `::estab-type-to-estab-cat-ds` val.
+  (Estab Type = GIAS Establishment Types split by SENU|RP augmented by SEN2 <SENsetting>s)"
+  [& {estab-type-to-estab-cat-ds' ::estab-type-to-estab-cat-ds
+      ::keys                      [estab-type-to-estab-cat-filename
+                                   dir
+                                   resource-dir]
+      :or                         {estab-type-to-estab-cat-filename "estab-type-to-estab-cat.csv"}}]
+  (or estab-type-to-estab-cat-ds'
+      (with-open [in (-> (filepath estab-type-to-estab-cat-filename dir resource-dir)
+                         io/file
+                         io/input-stream)]
+        (ds/->dataset in {:file-type   :csv
+                          :separator   ","
+                          :header-row? :true
+                          :key-fn      keyword
+                          :parser-fn   {:type-of-establishment-name    :string
+	                                :sen-unit-indicator            :boolean
+	                                :resourced-provision-indicator :boolean
+	                                :sen-setting                   :string
+	                                :estab-cat                     :string}}))))
+
+(comment ;; test
+  (estab-type-to-estab-cat-ds ::resource-dir "standard/")
+
+  )
+
+(defn estab-type-to-estab-cat
+  "Map Estab Types to `:estab-cat` Estab Categories categories.
+   Derived from `(estab-type-to-estab-cat-ds cfg)` unless specified in truthy `::estab-type-to-estab-cat` val."
+  [& {estab-type-to-estab-cat' ::estab-type-to-estab-cat
+      :as                      cfg}]
+  (or estab-type-to-estab-cat'
+      (-> (estab-type-to-estab-cat-ds cfg)
+          (ds->sorted-map-by estab-type-keys))))
+
+(comment ;; test
+  (-> (estab-type-to-estab-cat ::resource-dir "standard/")
+      )
+
+  )
+
+
