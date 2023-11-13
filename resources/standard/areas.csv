@@ -1,0 +1,3 @@
+abbreviation,order,name,label,definition
+IN,0,Internal provision,Int,Specialist provision funded by the LA
+EX,1,External provision,Ext,"Specialist provision from external providers (other LA, non-maintained, independent)."
