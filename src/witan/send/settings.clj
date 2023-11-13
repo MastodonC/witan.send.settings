@@ -317,14 +317,14 @@
 
 (comment ;; test
   (-> {::resource-dir "standard/"}
-      ((fn [m] (assoc m
-                      ::estab-cats-ds (-> (estab-cats-ds m)
-                                          (tc/drop-columns [:name]))
-                      #_#_::designations-ds (-> (designations-ds m)
-                                                (tc/drop-columns [:name :order]))
-                      #_#_::areas-ds (-> (areas-ds m)
-                                         (tc/drop-columns [:name :order]))
-                      )))
+      #_((fn [m] (assoc m
+                        ::estab-cats-ds (-> (estab-cats-ds m)
+                                            (tc/drop-columns [:name]))
+                        #_#_::designations-ds (-> (designations-ds m)
+                                                  (tc/drop-columns [:name :order]))
+                        #_#_::areas-ds (-> (areas-ds m)
+                                           (tc/drop-columns [:name :order]))
+                        )))
       (settings)
       #_(tc/drop-columns #"^.*definition")
       #_(vary-meta assoc :print-index-range 1000)
@@ -370,10 +370,117 @@
 
 
 
-
 ;;; # Setting Mappings
 ;;; ## SEN2 Establishments to `:estab-cat`
+(def sen2-estab-keys
+  "SEN2 establishment column keywords from `placement-detail` table"
+  [:urn :ukprn :sen-unit-indicator :resourced-provision-indicator :sen-setting])
+
 ;;; ### GIAS Establishments
+;;; #### Manual and Override settings
+(defn sen2-estab-settings-manual-ds
+  "Dataset mapping SEN2 Estab keys to manual settings.
+   Read from CSV file specified by `::sen2-estab-settings-manual-filename`, `::dir` & `::resource-dir` vals,
+   unless supplied in truthy `::sen2-estab-settings-manual-ds` val.
+  (SEN2 Estab = URN|UKPRN split by SENU|RP augmented by SEN2 <SENsetting>s)"
+  [& {sen2-estab-settings-manual-ds' ::sen2-estab-settings-manual-ds
+      ::keys                        [sen2-estab-settings-manual-filename
+                                     dir
+                                     resource-dir]
+      :or                           {sen2-estab-settings-manual-filename "sen2-estab-settings-manual.csv"}}]
+  (or sen2-estab-settings-manual-ds'
+      (with-open [in (-> (filepath sen2-estab-settings-manual-filename dir resource-dir)
+                         io/file
+                         io/input-stream)]
+        (ds/->dataset in {:file-type   :csv
+                          :separator   ","
+                          :header-row? :true
+                          :column-blocklist ["reference-website"
+                                             "notes"]
+                          :key-fn      keyword
+                          :parser-fn   {:urn                           :string
+                                        :ukprn                         :string
+	                                :sen-unit-indicator            :boolean
+	                                :resourced-provision-indicator :boolean
+	                                :sen-setting                   :string
+	                                :estab-cat                     :string
+                                        :designation                   :string
+                                        :la-code                       :string}}))))
+
+(comment ;; test
+  (-> (sen2-estab-settings-manual-ds ::resource-dir "standard/")
+      ((fn [ds] (-> ds tc/info (tc/select-columns [:col-name :datatype :n-valid :n-missing]))))
+      )
+
+  )
+
+(defn sen2-estab-settings-manual
+  "Map SEN2 Estab keys to manual settings.
+   Derived from `(sen2-estab-settings-manual-ds cfg)` unless specified in truthy `::sen2-estab-settings-manual` val."
+  [& {sen2-estab-settings-manual' ::sen2-estab-settings-manual
+      :as                      cfg}]
+  (or sen2-estab-settings-manual'
+      (-> (sen2-estab-settings-manual-ds cfg)
+          (ds->hash-map sen2-estab-keys))))
+
+(comment ;; test
+  (-> (sen2-estab-settings-manual ::resource-dir "standard/")
+      )
+
+  )
+
+
+(defn sen2-estab-settings-override-ds
+  "Dataset mapping SEN2 Estab keys to override settings.
+   Read from CSV file specified by `::sen2-estab-settings-override-filename`, `::dir` & `::resource-dir` vals,
+   unless supplied in truthy `::sen2-estab-settings-override-ds` val.
+  (SEN2 Estab = URN|UKPRN split by SENU|RP augmented by SEN2 <SENsetting>s)"
+  [& {sen2-estab-settings-override-ds' ::sen2-estab-settings-override-ds
+      ::keys                        [sen2-estab-settings-override-filename
+                                     dir
+                                     resource-dir]
+      :or                           {sen2-estab-settings-override-filename "sen2-estab-settings-override.csv"}}]
+  (or sen2-estab-settings-override-ds'
+      (with-open [in (-> (filepath sen2-estab-settings-override-filename dir resource-dir)
+                         io/file
+                         io/input-stream)]
+        (ds/->dataset in {:file-type   :csv
+                          :separator   ","
+                          :header-row? :true
+                          :column-blocklist ["reference-website"
+                                             "notes"]
+                          :key-fn      keyword
+                          :parser-fn   {:urn                           :string
+                                        :ukprn                         :string
+	                                :sen-unit-indicator            :boolean
+	                                :resourced-provision-indicator :boolean
+	                                :sen-setting                   :string
+	                                :estab-cat                     :string
+                                        :designation                   :string
+                                        :la-code                       :string}}))))
+
+(comment ;; test
+  (-> (sen2-estab-settings-override-ds ::dir "./tmp/")
+      #_((fn [ds] (-> ds tc/info (tc/select-columns [:col-name :datatype :n-valid :n-missing]))))
+      )
+
+  )
+
+(defn sen2-estab-settings-override
+  "Map SEN2 Estab keys to override settings.
+   Derived from `(sen2-estab-settings-override-ds cfg)` unless specified in truthy `::sen2-estab-settings-override` val."
+  [& {sen2-estab-settings-override' ::sen2-estab-settings-override
+      :as                      cfg}]
+  (or sen2-estab-settings-override'
+      (-> (sen2-estab-settings-override-ds cfg)
+          (ds->hash-map sen2-estab-keys))))
+
+(comment ;; test
+  (-> (sen2-estab-settings-override ::sen2-estab-settings-override-filename "./tmp/sen2-estab-settings-override-test.csv")
+      )
+
+  )
+
 ;;; #### GIAS Establishment Type to `:estab-cat`
 (def estab-type-keys [:type-of-establishment-name
                       :sen-unit-indicator
@@ -405,7 +512,8 @@
 	                                :estab-cat                     :string}}))))
 
 (comment ;; test
-  (estab-type-to-estab-cat-ds ::resource-dir "standard/")
+  (-> (estab-type-to-estab-cat-ds ::resource-dir "standard/")
+      )
 
   )
 
