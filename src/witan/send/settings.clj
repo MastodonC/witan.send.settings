@@ -15,16 +15,14 @@
   (compare [(get m k1) k1]
            [(get m k2) k2]))
 
-(defn ds->sorted-map-by
-  "Given dataset `ds`, returns sorted-map with
-   - keys from the `key-cols` of `ds` (as maps if multiple `key-cols`),
-   - vals as maps of the remaining dataset columns keyed by column-name,
-   - ordered by the order or rows in the `ds`.
-  Optional trailing keyword arguments:
-   - `:drop-val-cols` specify columns to drop from vals
-     (default `key-cols`, specify a non-existent column to include all).
-   - `:order-cols` to specify columns of `ds` to order by."
-  [ds key-cols & {:keys [drop-val-cols order-cols]}]
+(defn ds->hash-map
+  "Given dataset `ds`, returns hash-map with
+   - keys from the `key-cols` of `ds`.
+   - vals from the remaining columns of `ds`,
+     or just the `val-cols` if specified.
+  If `key-cols` (or `val-cols`) specify multiple columns,
+  then the keys (or vals) are returned as maps keyed by column name."
+  [ds key-cols & {:keys [val-cols]}]
   (let [columns (fn [ds] (if (< 1 (tc/column-count ds))
                            (tc/rows ds :as-maps)
                            (-> (tc/columns ds :as-seqs) first)))
@@ -32,12 +30,35 @@
                      (tc/select-columns key-cols)
                      (columns))
         vs       (-> ds
-                     (tc/drop-columns (or drop-val-cols key-cols))
-                     (tc/rows :as-maps))
+                     ((fn [ds] (if val-cols
+                                 (tc/select-columns ds val-cols)
+                                 (tc/drop-columns ds key-cols))))
+                     (columns))]
+    (zipmap ks vs)))
+
+(defn ds->sorted-map-by
+  "Given dataset `ds`, returns sorted-map with
+   - keys from the `key-col` of `ds` (values of which must compare).
+   - vals from the remaining columns,
+     or from just the `val-cols` if specified.
+   - ordered by the order of rows in the `ds`,
+     or by the values of `:order-col` if specified (which must compare).
+  If `val-cols` specify multiple columns,
+  then the vals are returned as maps keyed by column name."
+  [ds key-col & {:keys [val-cols order-col]}]
+  (let [columns (fn [ds] (if (< 1 (tc/column-count ds))
+                           (tc/rows ds :as-maps)
+                           (-> (tc/columns ds :as-seqs) first)))
+        ks       (-> ds
+                     (tc/select-columns key-col)
+                     (columns))
+        vs       (-> ds
+                     ((fn [ds] (if val-cols
+                                 (tc/select-columns ds val-cols)
+                                 (tc/drop-columns ds key-col))))
+                     (columns))
         os       (or
-                  (-> ds
-                      (tc/select-columns order-cols)
-                      (columns))
+                  (get ds order-col)
                   (range))]
     (into (sorted-map-by (partial compare-mapped-keys (zipmap ks os)))
           (zipmap ks vs))
@@ -47,9 +68,14 @@
 (comment ;; test
   (-> (tc/dataset [{:k1 :k1-1 :k2 :k2-1 :order 2 :v1 1 :v2 2}
                    {:k1 :k1-2 :k2 :k2-2 :order 1 :v1 2 :v2 1}])
-      (ds->sorted-map-by [:k1 :k2] #_#_:order-cols :order #_#_:drop-val-cols [:_none_])
+      (ds->hash-map [:k1 :k2] :val-cols [:v1 #_:v2])
       )
-  
+
+  (-> (tc/dataset [{:k1 :k1-1 :k2 :k2-1 :order 2 :v1 1 :v2 2}
+                   {:k1 :k1-2 :k2 :k2-2 :order 1 :v1 2 :v2 1}])
+      (ds->sorted-map-by [:k1 #_:k2] :val-cols [:v1 :v2] :order-col :order)
+      )
+
   )
 
 (defn map->ds
@@ -134,11 +160,12 @@
       :as         cfg}]
   (or estab-cats'
       (-> (estab-cats-ds cfg)
-          (ds->sorted-map-by :abbreviation :order-cols :order))))
+          (ds->sorted-map-by :abbreviation :order-col :order))))
 
 (comment ;; test
-  (estab-cats ::estab-cats-ds (estab-cats-ds {::estab-cats-filename "./tmp/estab-cats-test.csv"}))
+  (estab-cats ::resource-dir "standard/")
   (estab-cats ::estab-cats "override")
+  (estab-cats ::estab-cats-ds (estab-cats-ds {::estab-cats-filename "./tmp/estab-cats-test.csv"}))
 
   )
 
@@ -177,9 +204,10 @@
       :as           cfg}]
   (or designations'
       (-> (designations-ds cfg)
-          (ds->sorted-map-by :abbreviation :order-cols :order))))
+          (ds->sorted-map-by :abbreviation :order-col :order))))
 
 (comment ;; test
+  (designations ::resource-dir "standard/")
   (designations ::designations-ds (designations-ds {::designations-filename "./tmp/designations-test.csv"}))
 
   )
@@ -220,9 +248,10 @@
       :as    cfg}]
   (or areas'
       (-> (areas-ds cfg)
-          (ds->sorted-map-by :abbreviation :order-cols :order))))
+          (ds->sorted-map-by :abbreviation :order-col :order))))
 
 (comment ;; test
+  (areas ::resource-dir "standard/")
   (areas ::areas-ds (areas-ds {::areas-filename "./tmp/areas-test.csv"}))
 
   )
@@ -284,7 +313,7 @@
             ;; Tidy dataset
             (tc/select-columns [:abbreviation :order :name :label :definition :estab-cat :designation :area])
             ;; Convert to map
-            (ds->sorted-map-by :abbreviation :order-cols :order)))))
+            (ds->sorted-map-by :abbreviation :order-col :order)))))
 
 (comment ;; test
   (-> {::resource-dir "standard/"}
@@ -387,7 +416,7 @@
       :as                      cfg}]
   (or estab-type-to-estab-cat'
       (-> (estab-type-to-estab-cat-ds cfg)
-          (ds->sorted-map-by estab-type-keys))))
+          (ds->hash-map estab-type-keys))))
 
 (comment ;; test
   (-> (estab-type-to-estab-cat ::resource-dir "standard/")
