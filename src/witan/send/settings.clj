@@ -17,9 +17,10 @@
   "Given dataset `ds`, returns hash-map with
    - keys from the `key-cols` of `ds`.
    - vals from the remaining columns of `ds`,
-     or just the `val-cols` if specified.
-  If `key-cols` (or `val-cols`) specify multiple columns,
-  then the keys (or vals) are returned as maps keyed by column name."
+     or just the `val-cols` if specified,
+     as maps keyed by column name.
+  If `key-cols` specifies multiple columns,
+  then the keys are also returned as maps keyed by column name."
   [ds key-cols & {:keys [val-cols]}]
   (let [columns (fn [ds] (if (< 1 (tc/column-count ds))
                            (tc/rows ds :as-maps)
@@ -31,18 +32,17 @@
                      ((fn [ds] (if val-cols
                                  (tc/select-columns ds val-cols)
                                  (tc/drop-columns ds key-cols))))
-                     (columns))]
+                     (tc/rows :as-maps))]
     (zipmap ks vs)))
 
 (defn ds->sorted-map-by
   "Given dataset `ds`, returns sorted-map with
    - keys from the `key-col` of `ds` (values of which must compare).
    - vals from the remaining columns,
-     or from just the `val-cols` if specified.
+     or from just the `val-cols` if specified,
+     as maps keyed by column name.
    - ordered by the order of rows in the `ds`,
-     or by the values of `:order-col` if specified (which must compare).
-  If `val-cols` specify multiple columns,
-  then the vals are returned as maps keyed by column name."
+     or by the values of `:order-col` if specified (which must compare)."
   [ds key-col & {:keys [val-cols order-col]}]
   (let [columns (fn [ds] (if (< 1 (tc/column-count ds))
                            (tc/rows ds :as-maps)
@@ -54,7 +54,7 @@
                      ((fn [ds] (if val-cols
                                  (tc/select-columns ds val-cols)
                                  (tc/drop-columns ds key-col))))
-                     (columns))
+                     (tc/rows :as-maps))
         os       (or
                   (get ds order-col)
                   (range))]
@@ -133,7 +133,7 @@
       :as         cfg}]
   (or estab-cats'
       (-> (estab-cats-ds cfg)
-          (ds->sorted-map-by :abbreviation :order-col :order))))
+          (ds->sorted-map-by :abbreviation {:order-col :order}))))
 
 
 ;;; ## `:designation`: Designations
@@ -162,7 +162,7 @@
       :as           cfg}]
   (or designations'
       (-> (designations-ds cfg)
-          (ds->sorted-map-by :abbreviation :order-col :order))))
+          (ds->sorted-map-by :abbreviation {:order-col :order}))))
 
 
 ;;; ## `:area`: Area
@@ -191,7 +191,7 @@
       :as    cfg}]
   (or areas'
       (-> (areas-ds cfg)
-          (ds->sorted-map-by :abbreviation :order-col :order))))
+          (ds->sorted-map-by :abbreviation {:order-col :order}))))
 
 
 ;;; ## Settings
@@ -248,7 +248,7 @@
             ;; Tidy dataset
             (tc/select-columns [:abbreviation :order :name :label :definition :estab-cat :designation :area])
             ;; Convert to map
-            (ds->sorted-map-by :abbreviation :order-col :order)))))
+            (ds->sorted-map-by :abbreviation {:order-col :order})))))
 
 (defn setting-split-regexp
   "Return regex pattern for splitting setting abbreviations into components.
@@ -395,13 +395,14 @@
       (tc/dataset)))
 
 (defn estab-type-to-estab-cat
-  "Map Estab Types to `:estab-cat` Estab Categories categories.
+  "Map Estab Types to `:estab-cat`s.
    Derived from `(estab-type-to-estab-cat-ds cfg)` unless specified in truthy `::estab-type-to-estab-cat` val."
   [& {estab-type-to-estab-cat' ::estab-type-to-estab-cat
       :as                      cfg}]
   (or estab-type-to-estab-cat'
       (-> (estab-type-to-estab-cat-ds cfg)
-          (ds->hash-map estab-type-keys))))
+          (ds->hash-map estab-type-keys)
+          (update-vals :estab-cat))))
 
 
 ;;; ## Designation derivation
