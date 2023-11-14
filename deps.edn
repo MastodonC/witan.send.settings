@@ -9,6 +9,6 @@
                                                                          org.apache.poi/poi
                                                                          org.apache.poi/poi-ooxml]}
                                io.github.nextjournal/clerk {:mvn/version "0.15.957"} ;; Clerk only required by demo notebooks.
-                               mastodonc/gias              {:local/root "../witan.gias/"
-                                                            #_#_:git/url "https://github.com/MastodonC/witan.gias.git"
-                                                            #_#_:sha     "e6917079b4bba209a04ee9b5eb9a373931a99996"}}}}}
+                               mastodonc/gias              {#_#_:local/root "../witan.gias/"
+                                                            :git/url "https://github.com/MastodonC/witan.gias.git"
+                                                            :sha     "2af06be3535ba8d3743b732d750550ef5a041f4d"}}}}}
