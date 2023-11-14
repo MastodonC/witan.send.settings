@@ -1,12 +1,10 @@
 (ns witan.send.settings
-  (:require [clojure.set :as set]
-            [clojure.string :as string]
-            [clojure.java.io :as io]
+  "Define and assign tri-part establishment settings for witan SEND modelling."
+  (:require [clojure.java.io :as io]
             [clojure.string  :as string]
             [tablecloth.api  :as tc]
             [tech.v3.dataset :as ds]
             [witan.gias :as gias]))
-
 
 
 ;;; # Utility functions
@@ -61,28 +59,13 @@
                   (get ds order-col)
                   (range))]
     (into (sorted-map-by (partial compare-mapped-keys (zipmap ks os)))
-          (zipmap ks vs))
-    )
-  )
-
-(comment ;; test
-  (-> (tc/dataset [{:k1 :k1-1 :k2 :k2-1 :order 2 :v1 1 :v2 2}
-                   {:k1 :k1-2 :k2 :k2-2 :order 1 :v1 2 :v2 1}])
-      (ds->hash-map [:k1 :k2] :val-cols [:v1 #_:v2])
-      )
-
-  (-> (tc/dataset [{:k1 :k1-1 :k2 :k2-1 :order 2 :v1 1 :v2 2}
-                   {:k1 :k1-2 :k2 :k2-2 :order 1 :v1 2 :v2 1}])
-      (ds->sorted-map-by [:k1 #_:k2] :val-cols [:v1 :v2] :order-col :order)
-      )
-
-  )
+          (zipmap ks vs))))
 
 (defn map->ds
   "Given map with maps as values `m`, returns dataset
    with keys and vals of vals in columns
    named per the keys prefixed with `key-prefix`."
-  ;; TODO: Expand to unpack keys that are maps.
+  ;; TODO: Expand to unpack keys that are maps?
   [m key-prefix]
   (->> m
        (reduce-kv (fn [vec-of-rows-as-maps k v]
@@ -120,6 +103,7 @@
                       :label        :string
                       :definition   :string}})
 
+
 ;;; ## `:estab-cat`: Establishment Categories
 (defn estab-cats-ds
   "Dataset of establishment category definitions.
@@ -142,21 +126,6 @@
                                                       :split-area? :boolean}})))))
       (tc/dataset)))
 
-(comment ;; test
-  (estab-cats-ds)
-  (estab-cats-ds ::resource-dir "standard/")
-  
-  (estab-cats-ds {::estab-cats-filename "estab-cats-test.csv"
-                  ::dir                 "./tmp/"})
-
-  (estab-cats-ds {::estab-cats-filename "./tmp/estab-cats-test.csv"
-                  ::dir                 "./tmp/"
-                  ::resource-dir        "standard/"})
-
-  (estab-cats-ds ::estab-cats-ds "override")
-
-  )
-
 (defn estab-cats
   "Map establishment category abbreviations to attributes.
    Derived from `(estab-cats-ds cfg)` unless specified in truthy `::estab-cats` val."
@@ -165,14 +134,6 @@
   (or estab-cats'
       (-> (estab-cats-ds cfg)
           (ds->sorted-map-by :abbreviation :order-col :order))))
-
-(comment ;; test
-  (estab-cats)
-  (estab-cats ::resource-dir "standard/")
-  (estab-cats ::estab-cats "override")
-  (estab-cats ::estab-cats-ds (estab-cats-ds {::estab-cats-filename "./tmp/estab-cats-test.csv"}))
-
-  )
 
 
 ;;; ## `:designation`: Designations
@@ -194,16 +155,6 @@
             (ds/->dataset in csv->ds-opts))))
       (tc/dataset)))
 
-(comment ;; test
-  (designations-ds)
-  (designations-ds ::resource-dir "standard/")
-  (designations-ds {::designations-filename "designations-test.csv"
-                    ::dir                   "./tmp/"})
-  (designations-ds {::designations-filename "./tmp/designations-test.csv"
-                    ::resource-dir          "standard/"})
-
-  )
-
 (defn designations
   "Map designation abbreviations to attributes.
    Derived from `(designations-ds cfg)` unless specified in truthy `::designations` val."
@@ -212,13 +163,6 @@
   (or designations'
       (-> (designations-ds cfg)
           (ds->sorted-map-by :abbreviation :order-col :order))))
-
-(comment ;; test
-  (designations)
-  (designations ::resource-dir "standard/")
-  (designations ::designations-ds (designations-ds {::designations-filename "./tmp/designations-test.csv"}))
-
-  )
 
 
 ;;; ## `:area`: Area
@@ -240,17 +184,6 @@
             (ds/->dataset in csv->ds-opts))))
       (tc/dataset)))
 
-(comment ;; test
-  (areas-ds)
-  (areas-ds ::resource-dir "standard/")
-  (areas-ds {::areas-filename "areas-test.csv"
-             ::dir            "./tmp/"})
-  (areas-ds {::areas-filename "./tmp/areas-test.csv"
-             ::resource-dir   "standard/"})
-
-  )
-
-
 (defn areas
   "Map area abbreviations to attributes.
   Derived from `(areas-ds cfg)` unless specified in truthy `::areas` val."
@@ -259,15 +192,6 @@
   (or areas'
       (-> (areas-ds cfg)
           (ds->sorted-map-by :abbreviation :order-col :order))))
-
-(comment ;; test
-  (areas)
-  (areas ::resource-dir "standard/")
-  (areas ::areas-ds (areas-ds {::areas-filename "./tmp/areas-test.csv"}))
-
-  )
-
-
 
 
 ;;; ## Settings
@@ -326,24 +250,6 @@
             ;; Convert to map
             (ds->sorted-map-by :abbreviation :order-col :order)))))
 
-(comment ;; test
-  (-> {::resource-dir "standard/"}
-      #_((fn [m] (assoc m
-                        ::estab-cats-ds (-> (estab-cats-ds m)
-                                            (tc/drop-columns [:name]))
-                        #_#_::designations-ds (-> (designations-ds m)
-                                                  (tc/drop-columns [:name :order]))
-                        #_#_::areas-ds (-> (areas-ds m)
-                                           (tc/drop-columns [:name :order]))
-                        )))
-      (settings)
-      #_(tc/drop-columns #"^.*definition")
-      #_(vary-meta assoc :print-index-range 1000)
-      )
-
-  )
-
-
 (defn setting-split-regexp
   "Return regex pattern for splitting setting abbreviations into components.
    Relies on area abbreviations not clashing with designation abbreviations.
@@ -363,28 +269,13 @@
                          "_??(?<designation>[^_]+)??"
                          "_?(?<area>" (string/join "|" area-abbreviations') ")?$")))))
 
-(comment ;; test
-  (setting-split-regexp ::setting-split-regex "42")
-  (setting-split-regexp :area-abbreviations ["foo" "bar"])
-  (setting-split-regexp ::resource-dir "standard/")
-  (-> (settings ::resource-dir "standard/")
-      keys
-      (as-> $ (tc/dataset {:setting $}))
-      (tc/separate-column :setting [:estab-cat :designation :area-indicator]
-                          (setting-split-regexp ::resource-dir "standard/")
-                          {:drop-column? false})
-      (vary-meta assoc :print-index-range 1000)
-      )
-
-  )
-
-
 
 
 ;;; # Settings
 (def sen2-estab-keys
   "SEN2 establishment column keywords from `placement-detail` table"
   [:urn :ukprn :sen-unit-indicator :resourced-provision-indicator :sen-setting])
+
 
 ;;; ## Manual and Override settings
 (defn sen2-estab-settings-manual-ds
@@ -419,14 +310,6 @@
                                             :la-code                       :string}}))))
       (tc/dataset)))
 
-(comment ;; test
-  (sen2-estab-settings-manual-ds)
-  (-> (sen2-estab-settings-manual-ds ::resource-dir "standard/")
-      ((fn [ds] (-> ds tc/info (tc/select-columns [:col-name :datatype :n-valid :n-missing]))))
-      )
-
-  )
-
 (defn sen2-estab-settings-manual
   "Map SEN2 Estab keys to manual settings.
    Derived from `(sen2-estab-settings-manual-ds cfg)` unless specified in truthy `::sen2-estab-settings-manual` val."
@@ -435,14 +318,6 @@
   (or sen2-estab-settings-manual'
       (-> (sen2-estab-settings-manual-ds cfg)
           (ds->hash-map sen2-estab-keys))))
-
-(comment ;; test
-  (sen2-estab-settings-manual)
-  (-> (sen2-estab-settings-manual ::resource-dir "standard/")
-      )
-
-  )
-
 
 (defn sen2-estab-settings-override-ds
   "Dataset mapping SEN2 Estab keys to override settings.
@@ -476,14 +351,6 @@
                                             :la-code                       :string}}))))
       (tc/dataset)))
 
-(comment ;; test
-  (sen2-estab-settings-override-ds)
-  (-> (sen2-estab-settings-override-ds ::dir "./tmp/")
-      #_((fn [ds] (-> ds tc/info (tc/select-columns [:col-name :datatype :n-valid :n-missing]))))
-      )
-
-  )
-
 (defn sen2-estab-settings-override
   "Map SEN2 Estab keys to override settings.
    Derived from `(sen2-estab-settings-override-ds cfg)` unless specified in truthy `::sen2-estab-settings-override` val."
@@ -493,12 +360,6 @@
       (-> (sen2-estab-settings-override-ds cfg)
           (ds->hash-map sen2-estab-keys))))
 
-(comment ;; test
-  (sen2-estab-settings-override)
-  (-> (sen2-estab-settings-override ::sen2-estab-settings-override-filename "./tmp/sen2-estab-settings-override-test.csv")
-      )
-
-  )
 
 ;;; ## GIAS Establishment Type to `:estab-cat`
 (def estab-type-keys [:type-of-establishment-name
@@ -533,14 +394,6 @@
 	                                    :estab-cat                     :string}}))))
       (tc/dataset)))
 
-(comment ;; test
-  (estab-type-to-estab-cat-ds)
-  (-> (estab-type-to-estab-cat-ds ::resource-dir "standard/")
-      )
-
-  )
-
-
 (defn estab-type-to-estab-cat
   "Map Estab Types to `:estab-cat` Estab Categories categories.
    Derived from `(estab-type-to-estab-cat-ds cfg)` unless specified in truthy `::estab-type-to-estab-cat` val."
@@ -550,12 +403,6 @@
       (-> (estab-type-to-estab-cat-ds cfg)
           (ds->hash-map estab-type-keys))))
 
-(comment ;; test
-  (estab-type-to-estab-cat)
-  (-> (estab-type-to-estab-cat ::resource-dir "standard/")
-      )
-
-  )
 
 ;;; ## Designation derivation
 (defn sen-provision-types-vec->designation
@@ -600,8 +447,7 @@
   [in-area-la-codes la-code]
   (cond (in-area-la-codes la-code) "InA"
         (some? la-code)            "OoA"
-        :else                      "XxX")
-  )
+        :else                      "XxX"))
 
 (defn standard-area-split-f
   [& {:keys  [la-code]
