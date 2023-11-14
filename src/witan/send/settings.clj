@@ -557,7 +557,56 @@
 
   )
 
+;;; ## Designation derivation
+(defn sen-provision-types-vec->designation
+  "Returns MC standard designation given vector of SEN provision types extracted from GIAS."
+  ;; | Area of Need                            | Short Code | Needs Served          |
+  ;; |:----------------------------------------|:-----------|:----------------------|
+  ;; | Social, Emotional & Mental Health Needs | SEMH       | SEMH                  |
+  ;; | Communication & Interaction Needs       | COIN       | SLCN                  |
+  ;; | High Communication & Interaction Needs  | HCOIN      | ASD                   |
+  ;; | High COIN & SEMH                        | HCOIN+SEMH | ASD Plus SEMH         |
+  ;; | Sensory & Physical Disability Needs     | SPN        | HI or VI or PD        |
+  ;; | Cognition & Learning Needs              | C+L        | MLD or SpLD           |
+  ;; | High Cognition & Learning Needs         | HC+L       | SLD or PMLD           |
+  ;; | Complex Social & Care Needs             | CS+CN      | ASD, Plus SLD or PMLD |
+  ;;
+  ;; The dividing line between one broad area and another being whether or
+  ;; not they will accept some needs. SEMH schools often won’t accept ASD
+  ;; for example. At most of these establishments other needs will be
+  ;; served as well.
+  [v]
+  (cond
+    (and (some #{"ASD"}               v)
+         (some #{"SLD" "PMLD"}        v)) "CS+CN"
+    (and (some #{"ASD"}               v)
+         (some #{"SEMH"}              v)) "HCOIN+SEMH"
+    (some      #{"SEMH"}              v)  "SEMH"
+    (some      #{"ASD"}               v)  "HCOIN"
+    (some      #{"SLD" "PMLD"}        v)  "HC+L"
+    (some      #{"SLCN"}              v)  "COIN"
+    (some      #{"HI" "VI" "PD"}      v)  "SPN"
+    (some      #{"MLD" "SPLD" "SpLD"} v)  "C+L"
+    :else                           "GEN"))
 
+(defn standard-designation-f
+  [& {:keys [sen-provision-types-vec]}]
+  (sen-provision-types-vec->designation sen-provision-types-vec))
+
+
+;;; ## Area derivation
+(defn area-split-for-la-code
+  "Returns \"InA\" if `la-code` is in set `in-area-la-codes`, \"OoA\" if not and not nil, otherwise \"XxX\"."
+  [in-area-la-codes la-code]
+  (cond (in-area-la-codes la-code) "InA"
+        (some? la-code)            "OoA"
+        :else                      "XxX")
+  )
+
+(defn standard-area-split-f
+  [& {:keys  [la-code]
+      ::keys [in-area-la-codes]}]
+  (area-split-for-la-code in-area-la-codes la-code))
 
 (comment ;; dev
   ;; GIAS

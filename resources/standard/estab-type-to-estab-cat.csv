@@ -1,5 +1,5 @@
 type-of-establishment-name,sen-unit-indicator,resourced-provision-indicator,sen-setting,estab-cat
-,,,EYP,EYP
+,FALSE,FALSE,EYP,EYP
 Local authority nursery school,FALSE,FALSE,,EYS
 Community school,FALSE,FALSE,,MsMdA
 Voluntary aided school,FALSE,FALSE,,MsMdA
@@ -47,15 +47,15 @@ Higher education institutions,FALSE,FALSE,,GFE
 University technical college,FALSE,FALSE,,GFE
 Special post 16 institution,FALSE,FALSE,,SP16
 Secure units,FALSE,FALSE,,OLAS
-,,,OLA,OLAS
+,FALSE,FALSE,OLA,OLAS
 Online provider,FALSE,FALSE,,OLAS
 Service children's education,FALSE,FALSE,,OLAS
 Offshore schools,FALSE,FALSE,,OLAS
 British schools overseas,FALSE,FALSE,,OLAS
 Institution funded by other government department,FALSE,FALSE,,OLAS
 Miscellaneous,FALSE,FALSE,,OLAS
-,,,OPA,OPA
-,,,EHE,EHE
-,,,NEET,NEET
-,,,NIEC,NIEC
-,,,NIEO,NIEO
+,FALSE,FALSE,OPA,OPA
+,FALSE,FALSE,EHE,EHE
+,FALSE,FALSE,NEET,NEET
+,FALSE,FALSE,NIEC,NIEC
+,FALSE,FALSE,NIEO,NIEO
