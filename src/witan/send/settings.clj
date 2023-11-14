@@ -608,15 +608,13 @@
       ::keys [in-area-la-codes]}]
   (area-split-for-la-code in-area-la-codes la-code))
 
+
+
+;;; ## Setting for sen2-estab
 (comment ;; dev
-  ;; GIAS
   ;; :estab -> :estab-name & :estab-type
-  ;; GIAS urn return map with :establishment-name, :establishment-type
-
-
-  (-> (gias/edubaseall-send->ds)
-      tc/column-names
-      )
+  ;; sen2-estab->setting-map
+  ;; sen2-estab->setting
 
   (
    (fn [{:keys [urn
@@ -628,44 +626,121 @@
                 ukprn                         nil
                 sen-unit-indicator            false
                 resourced-provision-indicator false
-                sen-setting                   nil}
-         :as   sen2-estab}
-        & {::keys [sen-unit-name
+                sen-setting                   nil}}
+        & {::keys [designation-f
+                   area-split-f
+                   in-area-la-codes
+                   sen-unit-name
                    resourced-provision-name]
-           :or    {sen-unit-name            "(SEN Unit)"
+           :or    {designation-f            (fn [& args] nil)
+                   area-split-f             (fn [& args] nil)
+                   sen-unit-name            "(SEN Unit)"
                    resourced-provision-name "(Resourced Provision)"}
            :as    cfg}]
-     (let [;; Get GIAS information for this sen2-estab
-           edubaseall-send ((gias/edubaseall-send->map) urn)
-           estab-name-gias (let [establishment-name (:establishment-name edubaseall-send)]
-                             (when establishment-name
-                               (str establishment-name
-                                    (when sen-unit-indicator (str " " sen-unit-name))
-                                    (when resourced-provision-indicator (str " " resourced-provision-name)))))
-           estab-type-gias (let [type-of-establishment-name (:type-of-establishment-name edubaseall-send)]
-                             (when type-of-establishment-name
-                               (get (estab-type-to-estab-cat cfg)
-                                    {:type-of-establishment-name    type-of-establishment-name
-                                     :sen-unit-indicator            sen-unit-indicator
-                                     :resourced-provision-indicator resourced-provision-indicator
-                                     :sen-setting                   sen-setting})))
+     (let [sen2-estab          {:urn                           urn
+                                :ukprn                         ukprn
+                                :sen-unit-indicator            sen-unit-indicator
+                                :resourced-provision-indicator resourced-provision-indicator
+                                :sen-setting                   sen-setting}
+           ;; Get any override or manual setting information for this sen2-estab
+           override            (get (sen2-estab-settings-override cfg) sen2-estab)
+           manual              (get (sen2-estab-settings-manual cfg) sen2-estab)
+           ;; Get GIAS information for this sen2-estab
+           edubaseall-send     ((gias/edubaseall-send->map cfg) urn)
+           estab-name-via-gias (let [establishment-name (:establishment-name edubaseall-send)]
+                                 (when establishment-name
+                                   (str establishment-name
+                                        (when sen-unit-indicator (str " " sen-unit-name))
+                                        (when resourced-provision-indicator (str " " resourced-provision-name)))))
+           ;; Derive estab-type from GIAS and sen2-estab info. Note this handles sen-setting too.
+           estab-type          {:type-of-establishment-name    (:type-of-establishment-name edubaseall-send)
+                                :sen-unit-indicator            sen-unit-indicator
+                                :resourced-provision-indicator resourced-provision-indicator
+                                :sen-setting                   sen-setting}
+           ;; Lookup estab-cat for this estab-type
+           estab-cat-via-gias  (get (estab-type-to-estab-cat cfg) estab-type)
+           ;; Derive estab-name: Precedence: override > gias (with SENU|RP indicated) > manual > (SEN setting)
+           estab-name          (or (get override :estab-name)
+                                   estab-name-via-gias
+                                   (get manual :estab-name)
+                                   (when sen-setting (format "(SEN Setting: %s)" sen-setting)))
+           ;; Derive estab-cat: Set to "XxX" if have truthy values for sen2-estab keys but can't derive
+           estab-cat           (or (get override :estab-cat)
+                                   estab-cat-via-gias
+                                   (get manual :estab-cat)
+                                   (when (not-any? boolean (vals sen2-estab)) "UKN")
+                                   "XxX") ; Avoid "XxX" via manual or override.
+           ;; Derive designation if estab-cat to be designated: Set to "XxX" if have truthy values for sen2-estab keys but can't derive
+           designate?          (get-in (estab-cats cfg) [estab-cat :designate?])
+           designation         (when designate? (or (get override :designation)
+                                                    (designation-f (assoc sen2-estab
+                                                                          :estab-cat estab-cat
+                                                                          :sen-provision-types-vec (get edubaseall-send :sen-provision-types-vec)
+                                                                          #_#_:edubaseall-send edubaseall-send))
+                                                    (get manual :designation)
+                                                    (when (not-any? boolean (vals sen2-estab)) "UKN") ; Only possible if estab-cat "UKN" designated!?
+                                                    "XxX")) ; Avoid "XxX" via manual, designation-f, or override.
+           ;; Derive `:area` for `:estab-cat`s to be split by area:
+           split-area?         (get-in (estab-cats cfg) [estab-cat :split-area?])
+           la-code             (or (get override :la-code)
+                                   (get edubaseall-send :la-code)
+                                   (get manual :la-code))
+           area                (when split-area? (or (area-split-f (assoc sen2-estab
+                                                                          :estab-cat estab-cat
+                                                                          :la-code la-code
+                                                                          ::in-area-la-codes in-area-la-codes))
+                                                     (when (not-any? boolean (vals sen2-estab)) "UKN") ; Only possible if estab-cat "UKN" designated!?
+                                                     "XxX")) ; Avoid "XxX" via manual, area-split-f, or override.
+           ;; Derive setting from estab-cat, designation and area abbreviations
+           setting             (string/join "_" (filter some? [estab-cat designation area]))
            ]
-       {#_#_:edubaseall-send edubaseall-send
-        :estab-name-gias     estab-name-gias
-        :estab-type-gias     estab-type-gias}
+       {:sen2-estab          sen2-estab
+        :override            override
+        :edubaseall-send     (select-keys edubaseall-send [:urn
+                                                           :ukprn
+                                                           :establishment-name
+                                                           :type-of-establishment-name
+                                                           :establishment-type-group-name
+                                                           :la-code
+                                                           :la-name
+                                                           :statutory-low-age
+                                                           :statutory-high-age
+                                                           :senpru-name
+                                                           :sen-unit?
+                                                           :resourced-provision?
+                                                           :sen-provision-types-vec])
+        :estab-name-via-gias estab-name-via-gias
+        :estab-type          estab-type
+        :estab-cat-via-gias  estab-cat-via-gias
+        :manual              manual
+        :estab-name          estab-name
+        :estab-cat           estab-cat
+        :designate?          designate?
+        :designation         designation
+        :split-area?         split-area?
+        :la-code             la-code
+        :area                area
+        :setting             setting
+        }
        )
      )
    {:urn                               "144009"
     #_#_:ukprn                         nil
     #_#_:sen-unit-indicator            false
     #_#_:resourced-provision-indicator false
-    #_#_:sen-setting                   nil}
-   {::resource-dir             "standard/"
-    ::sen-unit-name            "Access Centre"
-    ::resourced-provision-name "Resource Base"}
+    #_#_:sen-setting                   nil
+    #_#_:sen-setting                   "PLC"
+    }
+   {#_#_::resource-dir                 "standard/"
+    ::dir                              "./tmp/"
+    #_#_::sen2-estab-settings-manual   {}
+    #_#_::sen2-estab-settings-override {}
+    ::designation-f                    standard-designation-f
+    ::area-split-f                     standard-area-split-f
+    ::in-area-la-codes                 #{"879"}
+    ::sen-unit-name                    "Access Centre"
+    ::resourced-provision-name         "Resource Base"}
    )
 
-
-
-
   )
+
