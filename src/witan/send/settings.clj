@@ -131,15 +131,19 @@
                       resource-dir]
       :or            {estab-cats-filename "estab-cats.csv"}}]
   (or estab-cats-ds'
-      (with-open [in (-> (filepath estab-cats-filename dir resource-dir)
-                         io/file
-                         io/input-stream)]
-        (ds/->dataset in (merge-with merge
-                                     csv->ds-opts
-                                     {:parser-fn {:designate?  :boolean
-                                                  :split-area? :boolean}})))))
+      (let [filepath (filepath estab-cats-filename dir resource-dir)]
+        (when filepath
+          (with-open [in (-> filepath
+                             io/file
+                             io/input-stream)]
+            (ds/->dataset in (merge-with merge
+                                         csv->ds-opts
+                                         {:parser-fn {:designate?  :boolean
+                                                      :split-area? :boolean}})))))
+      (tc/dataset)))
 
 (comment ;; test
+  (estab-cats-ds)
   (estab-cats-ds ::resource-dir "standard/")
   
   (estab-cats-ds {::estab-cats-filename "estab-cats-test.csv"
@@ -163,6 +167,7 @@
           (ds->sorted-map-by :abbreviation :order-col :order))))
 
 (comment ;; test
+  (estab-cats)
   (estab-cats ::resource-dir "standard/")
   (estab-cats ::estab-cats "override")
   (estab-cats ::estab-cats-ds (estab-cats-ds {::estab-cats-filename "./tmp/estab-cats-test.csv"}))
@@ -181,17 +186,19 @@
                         resource-dir]
       :or              {designations-filename "designations.csv"}}]
   (or designations-ds'
-      (with-open [in (-> (filepath designations-filename dir resource-dir)
-                         io/file
-                         io/input-stream)]
-        (ds/->dataset in csv->ds-opts))))
+      (let [filepath (filepath designations-filename dir resource-dir)]
+        (when filepath
+          (with-open [in (-> filepath
+                             io/file
+                             io/input-stream)]
+            (ds/->dataset in csv->ds-opts))))
+      (tc/dataset)))
 
 (comment ;; test
+  (designations-ds)
   (designations-ds ::resource-dir "standard/")
-  
   (designations-ds {::designations-filename "designations-test.csv"
                     ::dir                   "./tmp/"})
-
   (designations-ds {::designations-filename "./tmp/designations-test.csv"
                     ::resource-dir          "standard/"})
 
@@ -207,6 +214,7 @@
           (ds->sorted-map-by :abbreviation :order-col :order))))
 
 (comment ;; test
+  (designations)
   (designations ::resource-dir "standard/")
   (designations ::designations-ds (designations-ds {::designations-filename "./tmp/designations-test.csv"}))
 
@@ -224,17 +232,19 @@
                  resource-dir]
       :or       {areas-filename "areas.csv"}}]
   (or areas-ds'
-      (with-open [in (-> (filepath areas-filename dir resource-dir)
-                         io/file
-                         io/input-stream)]
-        (ds/->dataset in csv->ds-opts))))
+      (let [filepath (filepath areas-filename dir resource-dir)]
+        (when filepath
+          (with-open [in (-> filepath
+                             io/file
+                             io/input-stream)]
+            (ds/->dataset in csv->ds-opts))))
+      (tc/dataset)))
 
 (comment ;; test
+  (areas-ds)
   (areas-ds ::resource-dir "standard/")
-  
   (areas-ds {::areas-filename "areas-test.csv"
              ::dir            "./tmp/"})
-
   (areas-ds {::areas-filename "./tmp/areas-test.csv"
              ::resource-dir   "standard/"})
 
@@ -251,6 +261,7 @@
           (ds->sorted-map-by :abbreviation :order-col :order))))
 
 (comment ;; test
+  (areas)
   (areas ::resource-dir "standard/")
   (areas ::areas-ds (areas-ds {::areas-filename "./tmp/areas-test.csv"}))
 
@@ -370,14 +381,12 @@
 
 
 
-;;; # Setting Mappings
-;;; ## SEN2 Establishments to `:estab-cat`
+;;; # Settings
 (def sen2-estab-keys
   "SEN2 establishment column keywords from `placement-detail` table"
   [:urn :ukprn :sen-unit-indicator :resourced-provision-indicator :sen-setting])
 
-;;; ### GIAS Establishments
-;;; #### Manual and Override settings
+;;; ## Manual and Override settings
 (defn sen2-estab-settings-manual-ds
   "Dataset mapping SEN2 Estab keys to manual settings.
    Read from CSV file specified by `::sen2-estab-settings-manual-filename`, `::dir` & `::resource-dir` vals,
@@ -389,25 +398,29 @@
                                      resource-dir]
       :or                           {sen2-estab-settings-manual-filename "sen2-estab-settings-manual.csv"}}]
   (or sen2-estab-settings-manual-ds'
-      (with-open [in (-> (filepath sen2-estab-settings-manual-filename dir resource-dir)
-                         io/file
-                         io/input-stream)]
-        (ds/->dataset in {:file-type   :csv
-                          :separator   ","
-                          :header-row? :true
-                          :column-blocklist ["reference-website"
-                                             "notes"]
-                          :key-fn      keyword
-                          :parser-fn   {:urn                           :string
-                                        :ukprn                         :string
-	                                :sen-unit-indicator            :boolean
-	                                :resourced-provision-indicator :boolean
-	                                :sen-setting                   :string
-	                                :estab-cat                     :string
-                                        :designation                   :string
-                                        :la-code                       :string}}))))
+      (let [filepath (filepath sen2-estab-settings-manual-filename dir resource-dir)]
+        (when filepath
+          (with-open [in (-> filepath
+                             io/file
+                             io/input-stream)]
+            (ds/->dataset in {:file-type   :csv
+                              :separator   ","
+                              :header-row? :true
+                              :column-blocklist ["reference-website"
+                                                 "notes"]
+                              :key-fn      keyword
+                              :parser-fn   {:urn                           :string
+                                            :ukprn                         :string
+	                                    :sen-unit-indicator            :boolean
+	                                    :resourced-provision-indicator :boolean
+	                                    :sen-setting                   :string
+	                                    :estab-cat                     :string
+                                            :designation                   :string
+                                            :la-code                       :string}}))))
+      (tc/dataset)))
 
 (comment ;; test
+  (sen2-estab-settings-manual-ds)
   (-> (sen2-estab-settings-manual-ds ::resource-dir "standard/")
       ((fn [ds] (-> ds tc/info (tc/select-columns [:col-name :datatype :n-valid :n-missing]))))
       )
@@ -424,6 +437,7 @@
           (ds->hash-map sen2-estab-keys))))
 
 (comment ;; test
+  (sen2-estab-settings-manual)
   (-> (sen2-estab-settings-manual ::resource-dir "standard/")
       )
 
@@ -441,25 +455,29 @@
                                      resource-dir]
       :or                           {sen2-estab-settings-override-filename "sen2-estab-settings-override.csv"}}]
   (or sen2-estab-settings-override-ds'
-      (with-open [in (-> (filepath sen2-estab-settings-override-filename dir resource-dir)
-                         io/file
-                         io/input-stream)]
-        (ds/->dataset in {:file-type   :csv
-                          :separator   ","
-                          :header-row? :true
-                          :column-blocklist ["reference-website"
-                                             "notes"]
-                          :key-fn      keyword
-                          :parser-fn   {:urn                           :string
-                                        :ukprn                         :string
-	                                :sen-unit-indicator            :boolean
-	                                :resourced-provision-indicator :boolean
-	                                :sen-setting                   :string
-	                                :estab-cat                     :string
-                                        :designation                   :string
-                                        :la-code                       :string}}))))
+      (let [filepath (filepath sen2-estab-settings-override-filename dir resource-dir)]
+        (when filepath
+          (with-open [in (-> filepath
+                             io/file
+                             io/input-stream)]
+            (ds/->dataset in {:file-type   :csv
+                              :separator   ","
+                              :header-row? :true
+                              :column-blocklist ["reference-website"
+                                                 "notes"]
+                              :key-fn      keyword
+                              :parser-fn   {:urn                           :string
+                                            :ukprn                         :string
+	                                    :sen-unit-indicator            :boolean
+	                                    :resourced-provision-indicator :boolean
+	                                    :sen-setting                   :string
+	                                    :estab-cat                     :string
+                                            :designation                   :string
+                                            :la-code                       :string}}))))
+      (tc/dataset)))
 
 (comment ;; test
+  (sen2-estab-settings-override-ds)
   (-> (sen2-estab-settings-override-ds ::dir "./tmp/")
       #_((fn [ds] (-> ds tc/info (tc/select-columns [:col-name :datatype :n-valid :n-missing]))))
       )
@@ -476,12 +494,13 @@
           (ds->hash-map sen2-estab-keys))))
 
 (comment ;; test
+  (sen2-estab-settings-override)
   (-> (sen2-estab-settings-override ::sen2-estab-settings-override-filename "./tmp/sen2-estab-settings-override-test.csv")
       )
 
   )
 
-;;; #### GIAS Establishment Type to `:estab-cat`
+;;; ## GIAS Establishment Type to `:estab-cat`
 (def estab-type-keys [:type-of-establishment-name
                       :sen-unit-indicator
 	              :resourced-provision-indicator
@@ -498,24 +517,29 @@
                                    resource-dir]
       :or                         {estab-type-to-estab-cat-filename "estab-type-to-estab-cat.csv"}}]
   (or estab-type-to-estab-cat-ds'
-      (with-open [in (-> (filepath estab-type-to-estab-cat-filename dir resource-dir)
-                         io/file
-                         io/input-stream)]
-        (ds/->dataset in {:file-type   :csv
-                          :separator   ","
-                          :header-row? :true
-                          :key-fn      keyword
-                          :parser-fn   {:type-of-establishment-name    :string
-	                                :sen-unit-indicator            :boolean
-	                                :resourced-provision-indicator :boolean
-	                                :sen-setting                   :string
-	                                :estab-cat                     :string}}))))
+      (let [filepath (filepath estab-type-to-estab-cat-filename dir resource-dir)]
+        (when filepath
+          (with-open [in (-> filepath
+                             io/file
+                             io/input-stream)]
+            (ds/->dataset in {:file-type   :csv
+                              :separator   ","
+                              :header-row? :true
+                              :key-fn      keyword
+                              :parser-fn   {:type-of-establishment-name    :string
+	                                    :sen-unit-indicator            :boolean
+	                                    :resourced-provision-indicator :boolean
+	                                    :sen-setting                   :string
+	                                    :estab-cat                     :string}}))))
+      (tc/dataset)))
 
 (comment ;; test
+  (estab-type-to-estab-cat-ds)
   (-> (estab-type-to-estab-cat-ds ::resource-dir "standard/")
       )
 
   )
+
 
 (defn estab-type-to-estab-cat
   "Map Estab Types to `:estab-cat` Estab Categories categories.
@@ -527,9 +551,72 @@
           (ds->hash-map estab-type-keys))))
 
 (comment ;; test
+  (estab-type-to-estab-cat)
   (-> (estab-type-to-estab-cat ::resource-dir "standard/")
       )
 
   )
 
 
+
+(comment ;; dev
+  ;; GIAS
+  ;; :estab -> :estab-name & :estab-type
+  ;; GIAS urn return map with :establishment-name, :establishment-type
+
+
+  (-> (gias/edubaseall-send->ds)
+      tc/column-names
+      )
+
+  (
+   (fn [{:keys [urn
+                ukprn
+                sen-unit-indicator
+                resourced-provision-indicator
+                sen-setting]
+         :or   {urn                           nil
+                ukprn                         nil
+                sen-unit-indicator            false
+                resourced-provision-indicator false
+                sen-setting                   nil}
+         :as   sen2-estab}
+        & {::keys [sen-unit-name
+                   resourced-provision-name]
+           :or    {sen-unit-name            "(SEN Unit)"
+                   resourced-provision-name "(Resourced Provision)"}
+           :as    cfg}]
+     (let [;; Get GIAS information for this sen2-estab
+           edubaseall-send ((gias/edubaseall-send->map) urn)
+           estab-name-gias (let [establishment-name (:establishment-name edubaseall-send)]
+                             (when establishment-name
+                               (str establishment-name
+                                    (when sen-unit-indicator (str " " sen-unit-name))
+                                    (when resourced-provision-indicator (str " " resourced-provision-name)))))
+           estab-type-gias (let [type-of-establishment-name (:type-of-establishment-name edubaseall-send)]
+                             (when type-of-establishment-name
+                               (get (estab-type-to-estab-cat cfg)
+                                    {:type-of-establishment-name    type-of-establishment-name
+                                     :sen-unit-indicator            sen-unit-indicator
+                                     :resourced-provision-indicator resourced-provision-indicator
+                                     :sen-setting                   sen-setting})))
+           ]
+       {#_#_:edubaseall-send edubaseall-send
+        :estab-name-gias     estab-name-gias
+        :estab-type-gias     estab-type-gias}
+       )
+     )
+   {:urn                               "144009"
+    #_#_:ukprn                         nil
+    #_#_:sen-unit-indicator            false
+    #_#_:resourced-provision-indicator false
+    #_#_:sen-setting                   nil}
+   {::resource-dir             "standard/"
+    ::sen-unit-name            "Access Centre"
+    ::resourced-provision-name "Resource Base"}
+   )
+
+
+
+
+  )
