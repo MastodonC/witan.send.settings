@@ -472,7 +472,8 @@
               area-split-f
               in-area-la-codes
               sen-unit-name
-              resourced-provision-name]
+              resourced-provision-name
+              edubaseall-send-map]
       :or    {designation-f            (fn [& args] nil)
               area-split-f             (fn [& args] nil)
               sen-unit-name            "(SEN Unit)"
@@ -487,7 +488,9 @@
         override            (get (sen2-estab-settings-override cfg) sen2-estab)
         manual              (get (sen2-estab-settings-manual cfg) sen2-estab)
         ;; Get GIAS information for this sen2-estab
-        edubaseall-send     ((gias/edubaseall-send->map cfg) urn)
+        edubaseall-send     ((or edubaseall-send-map
+                                 (gias/edubaseall-send->map cfg))
+                             urn)
         estab-name-via-gias (let [establishment-name (:establishment-name edubaseall-send)]
                               (when establishment-name
                                 (str establishment-name
@@ -551,6 +554,6 @@
      :setting             setting}))
 
 (defn sen2-estab->setting
-  [sen2-estab cfg]
+  [sen2-estab & {:as cfg}]
   (:setting (sen2-estab->setting-map sen2-estab cfg)))
 
