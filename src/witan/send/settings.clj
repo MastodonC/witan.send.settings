@@ -437,7 +437,7 @@
     (some      #{"MLD" "SPLD" "SpLD"} v)  "C+L"
     :else                           "GEN"))
 
-(defn standard-designation-f
+(defn standard-designation
   [& {:keys [sen-provision-types-vec]}]
   (sen-provision-types-vec->designation sen-provision-types-vec))
 
@@ -450,7 +450,7 @@
         (some? la-code)            "OoA"
         :else                      "XxX"))
 
-(defn standard-area-split-f
+(defn standard-area-split
   [& {:keys  [la-code]
       ::keys [in-area-la-codes]}]
   (area-split-for-la-code in-area-la-codes la-code))

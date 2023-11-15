@@ -38,8 +38,8 @@
   :resourced-provision-indicator false
   :sen-setting                   nil}
  ::settings/resource-dir     "standard/"
- ::settings/designation-f    settings/standard-designation-f
- ::settings/area-split-f     settings/standard-area-split-f
+ ::settings/designation-f    settings/standard-designation
+ ::settings/area-split-f     settings/standard-area-split
  ::settings/in-area-la-codes #{"879"})
 
 ;; If you get "XxX" as part of the returned setting abbreviations then you need to provide more information:
@@ -159,7 +159,7 @@
 ;; given a map including the `sen2-estab` keys, `:estab-cat` (the
 ;; establishment category) and `:sen-provision-types-vec` (a vector of
 ;; the SEN provision type abbreviations for the establishment looked
-;; up from GIAS). Function `settings/standard-designation-f`
+;; up from GIAS). Function `settings/standard-designation`
 ;; implements the MC standard designations.
 
 ^{::clerk/viewer clerk/md}
@@ -167,7 +167,7 @@
  {:urn "113644"}
  ::settings/estab-type-to-estab-cat-ds estab-type-to-estab-cat-ds-2
  ::settings/estab-cats                 {"SpMdA" {:designate? true}}
- ::settings/designation-f              settings/standard-designation-f)
+ ::settings/designation-f              settings/standard-designation)
 
 
 ;;; ### Splitting by Area
@@ -182,7 +182,7 @@
 ;; given a map including the `sen2-estab` keys, `:estab-cat`, 
 ;; :la-code (the `la-code` for the `:urn` from GIAS) and
 ;; `::settings/in-area-la-codes` (from the `cfg` map).  Function
-;; `settings/standard-area-split-f` implements a simple area-split
+;; `settings/standard-area-split` implements a simple area-split
 ;; returning "InA" for `:la-code`s in the set
 ;; `::settings/in-area-la-codes` and "OoA" for other (non-nil)
 ;; `:la-codes`.
@@ -193,8 +193,8 @@
  ::settings/estab-type-to-estab-cat-ds estab-type-to-estab-cat-ds-2
  ::settings/estab-cats                 {"SpMdA" {:designate?  true
                                                  :split-area? true}}
- ::settings/designation-f              settings/standard-designation-f
- ::settings/area-split-f               settings/standard-area-split-f
+ ::settings/designation-f              settings/standard-designation
+ ::settings/area-split-f               settings/standard-area-split
  ::settings/in-area-la-codes           #{"879"})
 
 
@@ -322,8 +322,8 @@
  ::settings/estab-type-to-estab-cat-ds estab-type-to-estab-cat-ds-2
  ::settings/estab-cats                 {"SpMdA" {:designate?  true
                                                  :split-area? true}}
- ::settings/designation-f              settings/standard-designation-f
- ::settings/area-split-f               settings/standard-area-split-f
+ ::settings/designation-f              settings/standard-designation
+ ::settings/area-split-f               settings/standard-area-split
  ::settings/in-area-la-codes           #{"879"}
  ::settings/sen2-estab-settings-override-ds
  (tc/dataset [{:urn                           "113644"
@@ -344,8 +344,8 @@
  ::settings/estab-type-to-estab-cat-ds estab-type-to-estab-cat-ds-2
  ::settings/estab-cats                 {"SpMdA" {:designate?  false
                                                  :split-area? true}}
- ::settings/designation-f              settings/standard-designation-f
- ::settings/area-split-f               settings/standard-area-split-f
+ ::settings/designation-f              settings/standard-designation
+ ::settings/area-split-f               settings/standard-area-split
  ::settings/in-area-la-codes           #{"879"}
  ::settings/sen2-estab-settings-override-ds
  (tc/dataset [{:urn                           "113644"
