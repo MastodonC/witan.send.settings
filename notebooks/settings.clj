@@ -22,6 +22,68 @@
 {::clerk/visibility {:code :show}}
 
 
+;;; ## TL;DR
+;;; ### Basic use with standard MC settings
+;; To get the setting for a sen2-estab
+;; {`:urn` `:ukprn` `:sen-unit-indicator` `:resourced-provision-indicator` `:sen-setting`}
+;; using the MC standard settings from the library resource folder,
+;; with LA funded establishment categories split into in vs. out of
+;; area for local LA code "879":
+^{::clerk/viewer clerk/md}
+(settings/sen2-estab->setting
+ {:urn                           "113644"
+  :ukprn                         nil
+  :sen-unit-indicator            false
+  :resourced-provision-indicator false
+  :sen-setting                   nil}
+ ::settings/resource-dir     "standard/"
+ ::settings/designation-f    settings/standard-designation-f
+ ::settings/area-split-f     settings/standard-area-split-f
+ ::settings/in-area-la-codes #{"879"})
+
+;; If you get "XxX" as part of the returned setting abbreviations then you need to provide more information:
+;; - "XxX" for the first `estab-cat` component indicates can't get details via GIAS establishment type:
+;;   - if not in GIAS or a "Welsh establishment" then use manual specification of settings.
+;;   - if in GIAS then check mapping of establishment types to settings.
+;; - "XxX" for the second `designation` component indicates that the `designation-f` returned `nil`:
+;;   - check the designation-f.
+;; - "XxX" for the final `area` component indicates that the `area-split-f` returned `nil`:
+;;   - check the area-split-f and specification of set of `in-area-la-codes`.
+
+;; A `sen2-estab` with all components falsey will return a setting of "UKN":
+;; - Check placement data!
+
+;;; ### Other functionality
+;; - To get estab-name, setting components and intermediate values used
+;;   in the derivation of the setting (including results of the GIAS
+;;   lookup), use `settings/sen2-estab->setting-map`.
+;; - `settings/setting-split-regexp` returns a regex that will extract
+;;   the `estab-cat`, `designation` and `area` abbreviations from a
+;;   `setting` abbreviation.
+;; - Definitions of the `etab-cat`, `designation` and `area` components
+;;   of the settings (including labels and orders) as well as the
+;;   resulting set of (all possible) `setting`s are available via
+;;   functions `settings/estab-cats`, `settings/designations`,
+;;   `settings/areas` and `settings/settings`.
+;; - Configuration is via `cfg` map argument (or trailing key-value
+;;   pairs)
+;; - Lookups (e.g. for setting component definitions or mappings) are
+;;   used as maps but can be specified as datasets or CSV files or
+;;   directory (resource or path), with the first given used.
+;;   - This allows customisation, for example by using the standard
+;;     `::settings/resource-dir "standard/"` settings and mappings
+;;     overall but specifying a custom set of
+;;     `sen2-estab-settings-manual` settings via
+;;     `::settings/sen2-estab-settings-manual-filename "./sen2-estab-settings-manual.csv"`.
+;; - Functions that derive the lookup maps (from datasets - e.g. `settings/estab-cats`) or lookup
+;;   datasets (from CSV files) have options to specify the desired map
+;;   or dataset.
+;;   - This allows customisation: For example tweaking the standard
+;;     `estab-cats` map to turn off splitting of "SENU" by area.
+
+;; For details, read on…
+
+
 ;;; ## Settings via GIAS
 ;; Given a `sen2-estab` (map) and settings `cfg` map, function
 ;; `sen2-estab->setting` returns the setting.
