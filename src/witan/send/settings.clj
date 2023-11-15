@@ -520,7 +520,7 @@
                                                  (designation-f (assoc sen2-estab
                                                                        :estab-cat estab-cat
                                                                        :sen-provision-types-vec (get edubaseall-send :sen-provision-types-vec)
-                                                                       #_#_:edubaseall-send edubaseall-send))
+                                                                       :edubaseall-send edubaseall-send))
                                                  (get manual :designation)
                                                  (when (not-any? boolean (vals sen2-estab)) "UKN") ; Only possible if estab-cat "UKN" designated!?
                                                  "XxX")) ; Avoid "XxX" via manual, designation-f, or override.
