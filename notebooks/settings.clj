@@ -22,6 +22,7 @@
 {::clerk/visibility {:code :show}}
 
 
+;;; # Settings
 ;;; ## TL;DR
 ;;; ### Basic use with standard MC settings
 ;; To get the setting for a sen2-estab
@@ -202,37 +203,39 @@
 ;; by UKPRN) or the resulting `estab-type`
 ;; {`:type-of-establishment-name` `:sen-unit-indicator`
 ;; `:resourced-provision-indicator` `:sen-setting`} is not covered by
-;; the `estab-type-to-estab-cat` ;; mapping (e.g. a GIAS "Welsh
+;; the `estab-type-to-estab-cat` mapping (e.g. a GIAS "Welsh
 ;; establishment" or an unexpected `:sen-setting`), then the `setting`
 ;; is returned as "XxX":
 
 ^{::clerk/viewer clerk/md}
 (settings/sen2-estab->setting
- {:urn "401923"} ; In GIAS but of type "Welsh establishment"
+ {:urn "401923"} ; In GIAS but of type "Welsh establishment".
  ::settings/estab-type-to-estab-cat-ds estab-type-to-estab-cat-ds-2)
 
 ^{::clerk/viewer clerk/md}
 (settings/sen2-estab->setting
- {:ukprn "10088118"} ; UKPRN: not in GIAS
+ {:ukprn "10088118"} ; UKPRN: not in GIAS.
  ::settings/estab-type-to-estab-cat-ds estab-type-to-estab-cat-ds-2)
 
-;; For these establishments, the `estab-cat`, `designation` and
-;; `la-code` (from which any `area` split is determined) must be
-;; specified manually, via `sen2-estab-settings-manual` map, again
-;; specified in the `cfg` map: - directly as
-;; `::settings/sen2-estab-settings-manual`; - via dataset
-;; `::settings/sen2-estab-settings-manual-ds`; - or via CSV file
-;; specified by one or more of
-;; `::settings/sen2-estab-settings-manual-filename`,
-;; `::settings/resource-dir` or `::settings/dir`.
+;; For these establishments, the `estab-name`, `estab-cat`,
+;; `designation` and `la-code` (from which any `area` split is
+;; determined) must be specified manually, via
+;; `sen2-estab-settings-manual` map, again specified in the `cfg` map:
+;; - directly as `::settings/sen2-estab-settings-manual`
+;; - via dataset `::settings/sen2-estab-settings-manual-ds`
+;; - or via CSV file specified by one or more of
+;;   `::settings/sen2-estab-settings-manual-filename`,
+;;   `::settings/resource-dir` or `::settings/dir`.
 
-^{::clerk/viewer clerk/table}
+;; For example, for the two cases above:
+^{::clerk/viewer (partial clerk/table {::clerk/width :full})}
 (def sen2-estab-settings-manual-ds-1
   (tc/dataset [{:urn                           "401923"
                 :ukprn                         nil
                 :sen-unit-indicator            false
                 :resourced-provision-indicator false
                 :sen-setting                   nil
+                :estab-name                    "Greenfield Special School"
                 :estab-cat                     "SpMdA"
 	        :designation                   "SEMH"
 	        :la-code                       "675"}
@@ -241,6 +244,7 @@
                 :sen-unit-indicator            false
                 :resourced-provision-indicator false
                 :sen-setting                   nil
+                :estab-name                    "Orchard Manor School"
                 :estab-cat                     "SpMdA"
                 :designation                   "HCOIN+SEMH"
                 :la-code                       "878"}]))
@@ -257,7 +261,18 @@
  ::settings/estab-type-to-estab-cat-ds estab-type-to-estab-cat-ds-2
  ::settings/sen2-estab-settings-manual-ds sen2-estab-settings-manual-ds-1)
 
-;; Note that the manual setting components are _only_ used if they cannot be determined via GIAS `esstab-type` lookup:
+;; The manual dataset/map is keyed by the `sen2-estab` columns/map, so
+;; the dataset/map must contain columns/keys [`:urn` `:ukprn`
+;; `:sen-unit-indicator` `:resourced-provision-indicator`
+;; `:sen-setting`].
+
+;; The value columns/keys [`:estab-name`, `:estab-cat` `:designation`
+;; `:la-code`] are optional and can be omitted if not needed to hold
+;; non-nil values.
+
+;; Note that the manual setting components (`estab-name`, `estab-cat`,
+;; `designation` and `la-code`) are _only_ used if they cannot be
+;; determined via GIAS `esstab-type` lookup:
 ;; For example, for URN "113644" we can get `estab-type` via GIAS:
 ^{::clerk/viewer clerk/md}
 (settings/sen2-estab->setting
@@ -274,19 +289,97 @@
                :sen-unit-indicator            false
                :resourced-provision-indicator false
                :sen-setting                   nil
-               :estab-cat                     "**MANUAL**"}]))
+               :estab-cat                     "MANUAL~SETTING"}]))
 
 
 ;;; ## Override settings
-;; There is also provision for "override" settings: These are specified like the manual settings but 
+;; There is also provision for "override" setting components:
+
+;; These are specified like the manual settings but are applied in
+;; preference to information obtained via GIAS or from the manual
+;; settings.
+
+;; For example (contrast with the final example in the "manual" section above):
+^{::clerk/viewer clerk/md}
+(settings/sen2-estab->setting
+ {:urn "113644"}
+ ::settings/estab-type-to-estab-cat-ds estab-type-to-estab-cat-ds-2
+ ::settings/sen2-estab-settings-override-ds
+ (tc/dataset [{:urn                           "113644"
+               :ukprn                         nil
+               :sen-unit-indicator            false
+               :resourced-provision-indicator false
+               :sen-setting                   nil
+               :estab-cat                     "OVERRIDE~SETTING"}]))
+
+;; Note that only non-nil components are used as overrides.
+;; For example, an override record containing a non-nil `designation`
+;; only may be used to over-ride an algorithmically determined
+;; designation whilst retaining the `estab-cat` and `area` components:
+^{::clerk/viewer clerk/md}
+(settings/sen2-estab->setting
+ {:urn "113644"}
+ ::settings/estab-type-to-estab-cat-ds estab-type-to-estab-cat-ds-2
+ ::settings/estab-cats                 {"SpMdA" {:designate?  true
+                                                 :split-area? true}}
+ ::settings/designation-f              settings/standard-designation-f
+ ::settings/area-split-f               settings/standard-area-split-f
+ ::settings/in-area-la-codes           #{"879"}
+ ::settings/sen2-estab-settings-override-ds
+ (tc/dataset [{:urn                           "113644"
+               :ukprn                         nil
+               :sen-unit-indicator            false
+               :resourced-provision-indicator false
+               :sen-setting                   nil
+               :estab-cat                     nil
+               :designation                   "OVERRIDE~DESIGNATION"
+               :la-code                       nil}]))
+
+;; Note that `designation`s and `area`s are only applied to
+;; `estab-cat`s specified to be designated, even if an override (or
+;; manual) `designation` or `la-code` is specified:
+^{::clerk/viewer clerk/md}
+(settings/sen2-estab->setting
+ {:urn "113644"}
+ ::settings/estab-type-to-estab-cat-ds estab-type-to-estab-cat-ds-2
+ ::settings/estab-cats                 {"SpMdA" {:designate?  false
+                                                 :split-area? true}}
+ ::settings/designation-f              settings/standard-designation-f
+ ::settings/area-split-f               settings/standard-area-split-f
+ ::settings/in-area-la-codes           #{"879"}
+ ::settings/sen2-estab-settings-override-ds
+ (tc/dataset [{:urn                           "113644"
+               :ukprn                         nil
+               :sen-unit-indicator            false
+               :resourced-provision-indicator false
+               :sen-setting                   nil
+               :estab-cat                     nil
+               :designation                   "OVERRIDE~DESIGNATION"
+               :la-code                       nil}]))
 
 
 ;;; ## Unknown settings
 ;; If the `sen2-estab` is unknown (i.e. all keys falsey), the setting is returned as "UKN":
+^{::clerk/viewer clerk/md}
+(settings/sen2-estab->setting
+ {:urn                           nil
+  :ukprn                         nil
+  :sen-unit-indicator            false
+  :resourced-provision-indicator false
+  :sen-setting                   nil})
 
 
 ;;; ## (Ab)Use of `sen-setting`
-;; For placement level spevification of specific settings.
+;; For placement level specification of specific settings.
+
+
+;;; ## Configuration from files
+;; Recall configuration datasets/maps can be specified explicitly as
+;; maps/datasets via the corresponding
+;; `::settings/*`/`::settings/*-ds` keys as illustrated above, but
+;; also from CSV files specified via `::settings/*-filename`,
+;; `::settings/dir` & `::settings/resource-dir` keys.
+
 
 
 ;;; ## Some scenarios
@@ -308,3 +401,13 @@
 ;; The GIAS edubaseall dataset is huge, such that looking up URNs in a hash-map made from it is quite slow.
 ;;
 ;; To speed things up, create a edubaseall filtered for the URNs in your data and pass it to `` via `::settings/edubaseall-send-map`.
+
+
+;;; # Setting handling
+;;; ## Splitting setting abbreviations
+;; Function `setting-split-regexp` returns a regexp for splitting setting abbreviations.
+;;
+;; Because some `estab-cat`s may be split but not designated and others designated but not split, we need to:
+;; 1. Tell the function what the `area` abbreviations are (so it can greedily pull them off first).
+;; 2. Ensure no overlap between `area` abbreviations.
+
