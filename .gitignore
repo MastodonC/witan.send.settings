@@ -4,5 +4,4 @@
 .lsp/
 gc.log*
 .clerk/
-src/user.clj
 tmp/
