@@ -62,36 +62,36 @@
           (zipmap ks vs))))
 
 (defn map->ds
-  "Given map with maps as values `m`, returns dataset
-   with keys and vals of vals in columns
-   named per the keys prefixed with `key-prefix`."
-  ;; TODO: Expand to unpack keys that are maps?
-  [m key-prefix]
+  "Given map `m`, returns dataset with keys and vals as columns.
+   Column names via keyword parameters `:keys-col-name` & `:vals-col-name`.
+   Keys or vals that are maps are expanded into columns named by the map keys."
+  [m & {:keys [keys-col-name
+               vals-col-name]
+        :or   {keys-col-name :keys
+               vals-col-name :vals}}]
   (->> m
        (reduce-kv (fn [vec-of-rows-as-maps k v]
                     (conj vec-of-rows-as-maps
-                          (merge {(keyword key-prefix) k}
-                                 (update-keys v (comp keyword (partial str key-prefix "-") name)))))
+                          (merge (if (map? k) k {keys-col-name k})
+                                 (if (map? v) v {vals-col-name v}))))
                   [])
        tc/dataset))
 
 
 
 ;;; # Setting Definitions
-(defn- filepath
-  "Parse `filename`, `dir` & `resource-dir` parameters specifying definitions file to read:
-   - if `filename` is specified with a path (i.e. contains a \"/\"), then use that filepath, otherwise
-   - if `dir` is specified (non-nil), then prepend to `filename` to get filepath, otherwise
-   - if `resource-dir` is specified (non-nil), then prepend to `filename` and open resource-dir file on that path,
-   - else returns nil."
-  [filename dir resource-dir]
-  (cond
-    (re-find #"\/" filename) filename
-    (some? dir)              (str dir filename)
-    (some? resource-dir)     (io/resource (str resource-dir filename))
-    :else                    nil))
+(defn resource-or-file->dataset
+  "Reads file at `filepath` into dataset using `ds/->dataset` with `options`.
+   Paths beginning \"resources/\" are interpreted as resources."
+  [filepath options]
+  (with-open [in (-> (if (re-find #"^resources/" filepath)
+                       (io/resource (string/replace filepath #"^resources/" "" ))
+                       filepath)
+                     io/file
+                     io/input-stream)]
+    (ds/->dataset in (merge {:dataset-name filepath} options))))
 
-(def csv->ds-opts
+(def setting-defs-csv->ds-opts
   "Common options for `ds/->dataset` read of setting defs CSV files."
   {:file-type        :csv
    :separator        ","
@@ -106,149 +106,173 @@
 
 ;;; ## `:estab-cat`: Establishment Categories
 (defn estab-cats-ds
-  "Dataset of establishment category definitions.
-   Read from CSV file specified by `::estab-cats-filename`, `::dir` & `::resource-dir` vals,
-   unless supplied in truthy `::estab-cats-ds` val."
-  [& {estab-cats-ds' ::estab-cats-ds
-      ::keys         [estab-cats-filename
-                      dir
-                      resource-dir]
-      :or            {estab-cats-filename "estab-cats.csv"}}]
-  (or estab-cats-ds'
-      (let [filepath (filepath estab-cats-filename dir resource-dir)]
-        (when filepath
-          (with-open [in (-> filepath
-                             io/file
-                             io/input-stream)]
-            (ds/->dataset in (merge-with merge
-                                         csv->ds-opts
-                                         {:parser-fn {:designate?  :boolean
-                                                      :split-area? :boolean}})))))
-      (tc/dataset)))
+  "Return `estab-cats` dataset extracted/derived from `::estab-cats` key as follows:
+   - value a map: dataset reconstructed from map
+   - value a dataset: returned as-is
+   - value a string: file at that path read as dataset"
+  [& {::keys [estab-cats]}]
+  (let [ds-template (tc/dataset nil {:dataset-name "estab-cats"
+                                     :column-names (concat ((comp keys :parser-fn) setting-defs-csv->ds-opts)
+                                                           [:designate? :split-area?])})]
+    (cond
+      (string? estab-cats)     (resource-or-file->dataset estab-cats (merge-with merge
+                                                                                 setting-defs-csv->ds-opts
+                                                                                 {:parser-fn {:designate?  :boolean
+                                                                                              :split-area? :boolean}}))
+      (tc/dataset? estab-cats) estab-cats
+      (map? estab-cats)        (tc/concat-copying ds-template (map->ds estab-cats :keys-col-name :abbreviation))
+      :else                    ds-template)))
 
 (defn estab-cats
-  "Map establishment category abbreviations to attributes.
-   Derived from `(estab-cats-ds cfg)` unless specified in truthy `::estab-cats` val."
-  [& {estab-cats' ::estab-cats
-      :as         cfg}]
-  (or estab-cats'
-      (-> (estab-cats-ds cfg)
-          (ds->sorted-map-by :abbreviation {:order-col :order}))))
+  "Return `estab-cats` map extracted/derived from `::estab-cats` key as follows:
+   - value a map: map returned as-is
+   - value a dataset: made into a map keyed on `:abbreviation`
+   - value a string: file at that path read as dataset and made into a map keyed on `:abbreviation`"
+  [& {::keys [estab-cats] :as cfg}]
+  (as-> estab-cats $
+    (if (string? $)     (estab-cats-ds cfg) $)
+    (if (tc/dataset? $) (ds->sorted-map-by $ :abbreviation {:order-col :order}) $)
+    (if (map? $) $ {})))
 
 
 ;;; ## `:designation`: Designations
 (defn designations-ds
-  "Dataset of designation definitions.
-   Read from CSV file specified by `::designations-filename`, `::dir` & `::resource-dir` vals,
-   unless supplied in truthy `::designations-ds` val."
-  [& {designations-ds' ::designations-ds
-      ::keys           [designations-filename
-                        dir
-                        resource-dir]
-      :or              {designations-filename "designations.csv"}}]
-  (or designations-ds'
-      (let [filepath (filepath designations-filename dir resource-dir)]
-        (when filepath
-          (with-open [in (-> filepath
-                             io/file
-                             io/input-stream)]
-            (ds/->dataset in csv->ds-opts))))
-      (tc/dataset)))
+  "Return `designations` dataset extracted/derived from `::designations` key as follows:
+   - value a map: dataset reconstructed from map
+   - value a dataset: returned as-is
+   - value a string: file at that path read as dataset"
+  [& {::keys [designations]}]
+  (let [ds-template (tc/dataset nil {:dataset-name "designation"
+                                     :column-names ((comp keys :parser-fn) setting-defs-csv->ds-opts)})]
+    (cond
+      (string? designations)     (resource-or-file->dataset designations setting-defs-csv->ds-opts)
+      (tc/dataset? designations) designations
+      (map? designations)        (tc/concat-copying ds-template (map->ds designations :keys-col-name :abbreviation))
+      :else                      ds-template)))
 
 (defn designations
-  "Map designation abbreviations to attributes.
-   Derived from `(designations-ds cfg)` unless specified in truthy `::designations` val."
-  [& {designations' ::designations
-      :as           cfg}]
-  (or designations'
-      (-> (designations-ds cfg)
-          (ds->sorted-map-by :abbreviation {:order-col :order}))))
+  "Return `designations` map extracted/derived from `::designations` key as follows:
+   - value a map: map returned as-is
+   - value a dataset: made into a map keyed on `:abbreviation`
+   - value a string: file at that path read as dataset and made into a map keyed on `:abbreviation`"
+  [& {::keys [designations]}]
+  (as-> designations $
+    (if (string? $)     (resource-or-file->dataset $ setting-defs-csv->ds-opts) $)
+    (if (tc/dataset? $) (ds->sorted-map-by $ :abbreviation {:order-col :order}) $)
+    (if (map? $) $ {})))
 
 
 ;;; ## `:area`: Area
 (defn areas-ds
-  "Dataset of area definitions.
-   Read from CSV file specified by `::areas-filename`, `::dir` & `::resource-dir` vals,
-   unless supplied in truthy `::areas-ds` val."
-  [& {areas-ds' ::areas-ds
-      ::keys    [areas-filename
-                 dir
-                 resource-dir]
-      :or       {areas-filename "areas.csv"}}]
-  (or areas-ds'
-      (let [filepath (filepath areas-filename dir resource-dir)]
-        (when filepath
-          (with-open [in (-> filepath
-                             io/file
-                             io/input-stream)]
-            (ds/->dataset in csv->ds-opts))))
-      (tc/dataset)))
+  "Return `areas` dataset extracted/derived from `::areas` key as follows:
+   - value a map: dataset reconstructed from map
+   - value a dataset: returned as-is
+   - value a string: file at that path read as dataset"
+  [& {::keys [areas]}]
+  (let [ds-template (tc/dataset nil {:dataset-name "areas"
+                                     :column-names ((comp keys :parser-fn) setting-defs-csv->ds-opts)})]
+    (cond
+      (string? areas)     (resource-or-file->dataset areas setting-defs-csv->ds-opts)
+      (tc/dataset? areas) areas
+      (map? areas)        (tc/concat-copying ds-template (map->ds areas :keys-col-name :abbreviation))
+      :else               ds-template)))
 
 (defn areas
-  "Map area abbreviations to attributes.
-  Derived from `(areas-ds cfg)` unless specified in truthy `::areas` val."
-  [& {areas' ::areas
-      :as    cfg}]
-  (or areas'
-      (-> (areas-ds cfg)
-          (ds->sorted-map-by :abbreviation {:order-col :order}))))
+  "Return `areas` map extracted/derived from `::areas` key as follows:
+   - value a map: map returned as-is
+   - value a dataset: made into a map keyed on `:abbreviation`
+   - value a string: file at that path read as dataset and made into a map keyed on `:abbreviation`"
+  [& {::keys [areas]}]
+  (as-> areas $
+    (if (string? $)     (resource-or-file->dataset $ setting-defs-csv->ds-opts) $)
+    (if (tc/dataset? $) (ds->sorted-map-by $ :abbreviation {:order-col :order}) $)
+    (if (map? $) $ {})))
 
 
 ;;; ## Settings
 ;; Combining `:estab-cat`, `:designation` and `:area`:
-(defn settings
-  "Map setting abbreviations to attributes.
-   Derived from estab-cat, designation & area definitions unless specified in truthy `::settings` val:
-   - estab-cat definitions from `(estab-cats cfg)`
-   - designation definitions from `(designations cfg)`
-   - area definitions from `(areas cfg)`"
+(defn cfg->settings-ds
+  "Derive dataset of setting abbreviations and attributes from:
+   - estab-cat   definitions from `::estab-cats`
+   - designation definitions from `::designations`
+   - area        definitions from `::areas`."
+  [& {estab-cats'   ::estab-cats
+      designations' ::designations
+      areas'        ::areas}]
+  (let [prepend-str-to-keyword-f #(comp keyword (partial str % "-") name)
+        estab-cats-ds'           (estab-cats-ds ::estab-cats estab-cats')
+        designations-ds'         (designations-ds ::designations designations')
+        areas-ds'                (areas-ds ::areas areas')]
+    ;; FIXME: Drops estab-cats if should be designated|splie-area but no designations|areas (which is a config error).
+    ;; TODO: Only construct name|label|definition if have all components needed (i.e. need area if :estab-cat-split-area).
+    (-> estab-cats-ds'
+        (tc/rename-columns (prepend-str-to-keyword-f "estab-cat"))
+        ;; Expand `:estab-cat`s to be designated by designations
+        (as-> $
+            (tc/concat-copying (tc/drop-rows $ (comp :estab-cat-designate?))
+                               (-> (tc/select-rows $ (comp :estab-cat-designate?))
+                                   (tc/cross-join (-> designations-ds'
+                                                      (tc/rename-columns (prepend-str-to-keyword-f "designation")))))))
+        ;; Expand out `:estab-cat`s to be split by area
+        (as-> $
+            (tc/concat-copying (tc/drop-rows $ (comp :estab-cat-split-area?))
+                               (-> (tc/select-rows $ (comp :estab-cat-split-area?))
+                                   (tc/cross-join (-> areas-ds'
+                                                      (tc/rename-columns (prepend-str-to-keyword-f "area")))))))
+        ;; Derive setting `:abbreviation`
+        (tc/map-columns :abbreviation [:estab-cat-abbreviation :designation-abbreviation :area-abbreviation]
+                        (fn [& args] (clojure.string/join "_" (filter some? args))))
+        (tc/order-by [:estab-cat-order :designation-order :area-order])
+        (tc/add-column :order (iterate inc 1))
+        ;; Derive setting attributes from corresponding estab-cat, designation & area attributes (if available)
+        (tc/map-rows (fn [{:keys [estab-cat-name       designation-name       area-name
+                                  estab-cat-label      designation-label      area-label
+                                  estab-cat-definition designation-definition area-definition]}]
+                       (let [setting-attr-f (fn [estab-cat-attr designation-attr area-attr]
+                                              (str estab-cat-attr
+                                                   (when designation-attr (format " - %s" designation-label))
+                                                   (when area-attr (format " [%s]" area-label))))]
+                         (merge (when estab-cat-name
+                                  {:name (setting-attr-f estab-cat-name       designation-name       area-name      )})
+                                (when estab-cat-label
+                                  {:label (setting-attr-f estab-cat-label      designation-label      area-label     )})
+                                (when estab-cat-definition
+                                  {:definition (setting-attr-f estab-cat-definition designation-definition area-definition)})))))
+        ;; Tidy dataset
+        (tc/rename-columns {:estab-cat-abbreviation   :estab-cat
+                            :designation-abbreviation :designation
+                            :area-abbreviation        :area})
+        (tc/select-columns [:abbreviation :order :name :label :definition :estab-cat :designation :area]))))
+
+(defn settings-ds
+  "Dataset of setting abbreviations and attributes.
+   Derived from estab-cat, designation & area definitions unless specified in truthy `::settings` val."
   [& {settings' ::settings
       :as       cfg}]
-  (or settings'
-      (let [;; Derive definition datasets from maps in case maps have been provided in `cfg`
-            ;; TODO: If maps not provided then use ds directly? Move map->ds to the ds fns if map provided?
-            estab-cats'      (estab-cats cfg)
-            designations'    (designations cfg)
-            areas'           (areas cfg)
-            estab-cats-ds'   (map->ds estab-cats' "estab-cat")
-            designations-ds' (map->ds designations' "designation")
-            areas-ds'        (map->ds areas' "area")]
-        ;; TODO: Ensure works when not designating or area-splitting.
-        ;; TODO: Only construct name|label|definition if have all components needed (i.e. need area if :estab-cat-split-area).
-        (-> estab-cats-ds'
-            ;; Expand `:estab-cat`s to be designated by designations
-            (as-> $
-                (tc/concat-copying (tc/drop-rows $ (comp :estab-cat-designate?))
-                                   (-> (tc/select-rows $ (comp :estab-cat-designate?))
-                                       (tc/cross-join designations-ds'))))
-            ;; Expand out `:estab-cat`s to be split by area
-            (as-> $
-                (tc/concat-copying (tc/drop-rows $ (comp :estab-cat-split-area?))
-                                   (-> (tc/select-rows $ (comp :estab-cat-split-area?))
-                                       (tc/cross-join areas-ds'))))
-            ;; Derive setting `:abbreviation`
-            (tc/map-columns :abbreviation [:estab-cat :designation :area]
-                            (fn [& args] (clojure.string/join "_" (filter some? args))))
-            (tc/order-by [:estab-cat-order :designation-order :area-order])
-            (tc/add-column :order (iterate inc 1))
-            ;; Derive setting attributes from corresponding estab-cat, designation & area attributes (if available)
-            (tc/map-rows (fn [{:keys [estab-cat-name       designation-name       area-name
-                                      estab-cat-label      designation-label      area-label
-                                      estab-cat-definition designation-definition area-definition]}]
-                           (let [setting-attr-f (fn [estab-cat-attr designation-attr area-attr]
-                                                  (str estab-cat-attr
-                                                       (when designation-attr (format " - %s" designation-label))
-                                                       (when area-attr (format " [%s]" area-label))))]
-                             (merge (when estab-cat-name
-                                      {:name       (setting-attr-f estab-cat-name       designation-name       area-name      )})
-                                    (when estab-cat-label
-                                      {:label      (setting-attr-f estab-cat-label      designation-label      area-label     )})
-                                    (when estab-cat-definition
-                                      {:definition (setting-attr-f estab-cat-definition designation-definition area-definition)})))))
-            ;; Tidy dataset
-            (tc/select-columns [:abbreviation :order :name :label :definition :estab-cat :designation :area])
-            ;; Convert to map
-            (ds->sorted-map-by :abbreviation {:order-col :order})))))
+  (let [settings-ds-cols [:abbreviation :order :name :label :definition :estab-cat :designation :area]
+        ds-template      (tc/dataset nil {:dataset-name "settings"
+                                          :column-names settings-ds-cols})]
+    (cond
+      (nil? settings')        (-> cfg
+                                  cfg->settings-ds)
+      (tc/dataset? settings') settings'
+      (map? settings')        (tc/concat-copying ds-template
+                                                 (map->ds settings' :keys-col-name :abbreviation))
+      :else                   ds-template)))
+
+(defn settings
+  "Map setting abbreviations to attributes.
+   Derived from estab-cat, designation & area definitions unless specified in truthy `::settings` val."
+  [& {settings' ::settings
+      :as       cfg}]
+  (cond
+    (nil? settings')        (-> cfg
+                                (cfg->settings-ds)
+                                (ds->sorted-map-by :abbreviation {:order-col :order}))
+    (tc/dataset? settings') (-> settings'
+                                (ds->sorted-map-by :abbreviation {:order-col :order}))
+    (map? settings')        settings'
+    :else                   {}))
 
 (defn setting-split-regexp
   "Return regex pattern for splitting setting abbreviations into components.
@@ -271,94 +295,75 @@
 
 
 
-;;; # Settings
+;;; # Setting mappings
 (def sen2-estab-keys
   "SEN2 establishment column keywords from `placement-detail` table"
   [:urn :ukprn :sen-unit-indicator :resourced-provision-indicator :sen-setting])
 
 
 ;;; ## Manual and Override settings
+(def sen2-estab-settings-csv->ds-opts
+  "Options for `ds/->dataset` read of sen2-estab setting CSV files."
+  {:file-type        :csv
+   :separator        ","
+   :header-row?      :true
+   :column-blocklist ["reference-website"
+                      "notes"]
+   :key-fn           keyword
+   :parser-fn        {:urn                           :string
+                      :ukprn                         :string
+	              :sen-unit-indicator            :boolean
+	              :resourced-provision-indicator :boolean
+	              :sen-setting                   :string
+	              :estab-cat                     :string
+                      :designation                   :string
+                      :la-code                       :string}})
+
 (defn sen2-estab-settings-manual-ds
   "Dataset mapping SEN2 Estab keys to manual settings.
-   Read from CSV file specified by `::sen2-estab-settings-manual-filename`, `::dir` & `::resource-dir` vals,
-   unless supplied in truthy `::sen2-estab-settings-manual-ds` val.
+   Extracted/derived from `::sen2-estab-settings-manual` key.
   (SEN2 Estab = URN|UKPRN split by SENU|RP augmented by SEN2 <SENsetting>s)"
-  [& {sen2-estab-settings-manual-ds' ::sen2-estab-settings-manual-ds
-      ::keys                        [sen2-estab-settings-manual-filename
-                                     dir
-                                     resource-dir]
-      :or                           {sen2-estab-settings-manual-filename "sen2-estab-settings-manual.csv"}}]
-  (or sen2-estab-settings-manual-ds'
-      (let [filepath (filepath sen2-estab-settings-manual-filename dir resource-dir)]
-        (when filepath
-          (with-open [in (-> filepath
-                             io/file
-                             io/input-stream)]
-            (ds/->dataset in {:file-type   :csv
-                              :separator   ","
-                              :header-row? :true
-                              :column-blocklist ["reference-website"
-                                                 "notes"]
-                              :key-fn      keyword
-                              :parser-fn   {:urn                           :string
-                                            :ukprn                         :string
-	                                    :sen-unit-indicator            :boolean
-	                                    :resourced-provision-indicator :boolean
-	                                    :sen-setting                   :string
-	                                    :estab-cat                     :string
-                                            :designation                   :string
-                                            :la-code                       :string}}))))
-      (tc/dataset)))
+  [& {::keys [sen2-estab-settings-manual]}]
+  (let [ds-template (tc/dataset nil {:dataset-name "sen2-estab-settings-manual"
+                                     :column-names ((comp keys :parser-fn) sen2-estab-settings-csv->ds-opts)})]
+    (cond
+      (string? sen2-estab-settings-manual)     (resource-or-file->dataset sen2-estab-settings-manual sen2-estab-settings-csv->ds-opts)
+      (tc/dataset? sen2-estab-settings-manual) sen2-estab-settings-manual
+      (map? sen2-estab-settings-manual)        (tc/concat-copying ds-template (map->ds sen2-estab-settings-manual))
+      :else                                    ds-template)))
 
 (defn sen2-estab-settings-manual
   "Map SEN2 Estab keys to manual settings.
-   Derived from `(sen2-estab-settings-manual-ds cfg)` unless specified in truthy `::sen2-estab-settings-manual` val."
-  [& {sen2-estab-settings-manual' ::sen2-estab-settings-manual
-      :as                      cfg}]
-  (or sen2-estab-settings-manual'
-      (-> (sen2-estab-settings-manual-ds cfg)
-          (ds->hash-map sen2-estab-keys))))
+   Extracted/derived from `::sen2-estab-settings-manual` key.
+   (SEN2 Estab = URN|UKPRN split by SENU|RP augmented by SEN2 <SENsetting>s)"
+  [& {::keys [sen2-estab-settings-manual]}]
+  (as-> sen2-estab-settings-manual $
+    (if (string? $)     (resource-or-file->dataset $ sen2-estab-settings-csv->ds-opts) $)
+    (if (tc/dataset? $) (ds->hash-map $ sen2-estab-keys) $)
+    (if (map? $) $ {})))
 
 (defn sen2-estab-settings-override-ds
   "Dataset mapping SEN2 Estab keys to override settings.
-   Read from CSV file specified by `::sen2-estab-settings-override-filename`, `::dir` & `::resource-dir` vals,
-   unless supplied in truthy `::sen2-estab-settings-override-ds` val.
+   Extracted/derived from `::sen2-estab-settings-override` key.
   (SEN2 Estab = URN|UKPRN split by SENU|RP augmented by SEN2 <SENsetting>s)"
-  [& {sen2-estab-settings-override-ds' ::sen2-estab-settings-override-ds
-      ::keys                        [sen2-estab-settings-override-filename
-                                     dir
-                                     resource-dir]
-      :or                           {sen2-estab-settings-override-filename "sen2-estab-settings-override.csv"}}]
-  (or sen2-estab-settings-override-ds'
-      (let [filepath (filepath sen2-estab-settings-override-filename dir resource-dir)]
-        (when filepath
-          (with-open [in (-> filepath
-                             io/file
-                             io/input-stream)]
-            (ds/->dataset in {:file-type   :csv
-                              :separator   ","
-                              :header-row? :true
-                              :column-blocklist ["reference-website"
-                                                 "notes"]
-                              :key-fn      keyword
-                              :parser-fn   {:urn                           :string
-                                            :ukprn                         :string
-	                                    :sen-unit-indicator            :boolean
-	                                    :resourced-provision-indicator :boolean
-	                                    :sen-setting                   :string
-	                                    :estab-cat                     :string
-                                            :designation                   :string
-                                            :la-code                       :string}}))))
-      (tc/dataset)))
+  [& {::keys [sen2-estab-settings-override]}]
+  (let [ds-template (tc/dataset nil {:dataset-name "sen2-estab-settings-override"
+                                     :column-names ((comp keys :parser-fn) sen2-estab-settings-csv->ds-opts)})]
+    (cond
+      (string? sen2-estab-settings-override)     (resource-or-file->dataset sen2-estab-settings-override sen2-estab-settings-csv->ds-opts)
+      (tc/dataset? sen2-estab-settings-override) sen2-estab-settings-override
+      (map? sen2-estab-settings-override)        (tc/concat-copying ds-template (map->ds sen2-estab-settings-override))
+      :else                                      ds-template)))
 
 (defn sen2-estab-settings-override
   "Map SEN2 Estab keys to override settings.
-   Derived from `(sen2-estab-settings-override-ds cfg)` unless specified in truthy `::sen2-estab-settings-override` val."
-  [& {sen2-estab-settings-override' ::sen2-estab-settings-override
-      :as                      cfg}]
-  (or sen2-estab-settings-override'
-      (-> (sen2-estab-settings-override-ds cfg)
-          (ds->hash-map sen2-estab-keys))))
+   Extracted/derived from `::sen2-estab-settings-override` key.
+   (SEN2 Estab = URN|UKPRN split by SENU|RP augmented by SEN2 <SENsetting>s)"
+  [& {::keys [sen2-estab-settings-override]}]
+  (as-> sen2-estab-settings-override $
+    (if (string? $)     (resource-or-file->dataset $ sen2-estab-settings-csv->ds-opts) $)
+    (if (tc/dataset? $) (ds->hash-map $ sen2-estab-keys) $)
+    (if (map? $) $ {})))
 
 
 ;;; ## GIAS Establishment Type to `:estab-cat`
@@ -367,42 +372,40 @@
 	              :resourced-provision-indicator
 	              :sen-setting])
 
+(def estab-type-to-estab-cat-csv->ds-opts
+  "Options for `ds/->dataset` read of estab-type-to-estab-cat-csv CSV files."
+  {:file-type   :csv
+   :separator   ","
+   :header-row? :true
+   :key-fn      keyword
+   :parser-fn   {:type-of-establishment-name    :string
+	         :sen-unit-indicator            :boolean
+	         :resourced-provision-indicator :boolean
+	         :sen-setting                   :string
+	         :estab-cat                     :string}})
+
 (defn estab-type-to-estab-cat-ds
-  "Dataset mapping Estab Types to `:estab-cat` Estab Categories categories.
-   Read from CSV file specified by `::estab-type-to-estab-cat-filename`, `::dir` & `::resource-dir` vals,
-   unless supplied in truthy `::estab-type-to-estab-cat-ds` val.
-  (Estab Type = GIAS Establishment Types split by SENU|RP augmented by SEN2 <SENsetting>s)"
-  [& {estab-type-to-estab-cat-ds' ::estab-type-to-estab-cat-ds
-      ::keys                      [estab-type-to-estab-cat-filename
-                                   dir
-                                   resource-dir]
-      :or                         {estab-type-to-estab-cat-filename "estab-type-to-estab-cat.csv"}}]
-  (or estab-type-to-estab-cat-ds'
-      (let [filepath (filepath estab-type-to-estab-cat-filename dir resource-dir)]
-        (when filepath
-          (with-open [in (-> filepath
-                             io/file
-                             io/input-stream)]
-            (ds/->dataset in {:file-type   :csv
-                              :separator   ","
-                              :header-row? :true
-                              :key-fn      keyword
-                              :parser-fn   {:type-of-establishment-name    :string
-	                                    :sen-unit-indicator            :boolean
-	                                    :resourced-provision-indicator :boolean
-	                                    :sen-setting                   :string
-	                                    :estab-cat                     :string}}))))
-      (tc/dataset)))
+  "Dataset mapping Estab Types to `:estab-cat`s.
+   Extracted/derived from `::estab-type-to-estab-cat` key.
+   (Estab Type = GIAS Establishment Types split by SENU|RP augmented by SEN2 <SENsetting>s)"
+  [& {::keys [estab-type-to-estab-cat]}]
+  (let [ds-template (tc/dataset nil {:dataset-name "estab-type-to-estab-cat"
+                                     :column-names ((comp keys :parser-fn) estab-type-to-estab-cat-csv->ds-opts)})]
+    (cond
+      (string? estab-type-to-estab-cat)     (resource-or-file->dataset estab-type-to-estab-cat estab-type-to-estab-cat-csv->ds-opts)
+      (tc/dataset? estab-type-to-estab-cat) estab-type-to-estab-cat
+      (map? estab-type-to-estab-cat)        (tc/concat-copying ds-template (map->ds estab-type-to-estab-cat :vals-col-name :estab-cat))
+      :else                                 ds-template)))
 
 (defn estab-type-to-estab-cat
   "Map Estab Types to `:estab-cat`s.
-   Derived from `(estab-type-to-estab-cat-ds cfg)` unless specified in truthy `::estab-type-to-estab-cat` val."
-  [& {estab-type-to-estab-cat' ::estab-type-to-estab-cat
-      :as                      cfg}]
-  (or estab-type-to-estab-cat'
-      (-> (estab-type-to-estab-cat-ds cfg)
-          (ds->hash-map estab-type-keys)
-          (update-vals :estab-cat))))
+   Extracted/derived from `::estab-type-to-estab-cat` key.
+   (Estab Type = GIAS Establishment Types split by SENU|RP augmented by SEN2 <SENsetting>s)"
+  [& {::keys [estab-type-to-estab-cat]}]
+  (as-> estab-type-to-estab-cat $
+    (if (string? $)     (resource-or-file->dataset $ estab-type-to-estab-cat-csv->ds-opts) $)
+    (if (tc/dataset? $) (-> $ (ds->hash-map estab-type-keys) (update-vals :estab-cat)) $)
+    (if (map? $) $ {})))
 
 
 ;;; ## Designation derivation
@@ -456,7 +459,48 @@
   (area-split-for-la-code in-area-la-codes la-code))
 
 
-;;; ## Setting for sen2-estab
+
+;;; # Configs
+(defn parse-cfg
+  "Parse settings configuration map `cfg` replacing string filepath
+   values of selected keys with the dataset read from the file."
+  [& {::keys [edubaseall-send-map]
+      :as    cfg}]
+  (merge
+   (let [parse-string-v (fn [k v f] (if (string? v) (f k v) v))]
+     (reduce-kv
+      (fn [m k v]
+        (assoc m k (case k
+                     ::estab-cats                   (parse-string-v k v estab-cats-ds)
+                     ::designations                 (parse-string-v k v designations-ds)
+                     ::areas                        (parse-string-v k v areas-ds)
+                     ::sen2-estab-settings-manual   (parse-string-v k v sen2-estab-settings-manual-ds)
+                     ::sen2-estab-settings-override (parse-string-v k v sen2-estab-settings-override-ds)
+                     ::estab-type-to-estab-cat      (parse-string-v k v estab-type-to-estab-cat-ds)
+                     v)))
+      {}
+      cfg))
+   (when (nil? edubaseall-send-map) {::edubaseall-send-map (gias/edubaseall-send->map cfg)})))
+
+(def standard-cfg-files
+  "Configuration keys for standard settings CSV files."
+  {::estab-cats                   "resources/standard/estab-cats.csv"
+   ::designations                 "resources/standard/designations.csv"
+   ::areas                        "resources/standard/areas.csv"
+   ::sen2-estab-settings-manual   "resources/standard/sen2-estab-settings-manual.csv"
+   ::sen2-estab-settings-override "resources/standard/sen2-estab-settings-override.csv"
+   ::estab-type-to-estab-cat      "resources/standard/estab-type-to-estab-cat.csv"
+   ::designation-f                standard-designation
+   ::area-split-f                 standard-area-split})
+
+(defn standard-cfg
+  "Standard settings config, including GIAS `::edubaseall-send-map`."
+  [& {:as cfg}]
+  (parse-cfg (merge standard-cfg-files cfg)))
+
+
+
+;;; # Settings for sen2-estab
 (defn sen2-estab->setting-map
   [{:keys [urn
            ukprn
@@ -468,14 +512,20 @@
            sen-unit-indicator            false
            resourced-provision-indicator false
            sen-setting                   nil}}
-   & {::keys [designation-f
+   & {estab-cats'                        ::estab-cats                   ; required to specify :estab-cats to designate|area-split
+      sen2-estab-settings-override'      ::sen2-estab-settings-override ; optional
+      sen2-estab-settings-manual'        ::sen2-estab-settings-manual   ; optional
+      estab-type-to-estab-cat'           ::estab-type-to-estab-cat      ; required for GIAS lookups
+      ::keys [edubaseall-send-map                                       ; required for GIAS lookups
+              designation-f
               area-split-f
               in-area-la-codes
               sen-unit-name
-              resourced-provision-name
-              edubaseall-send-map]
-      :or    {designation-f            (fn [& args] nil)
+              resourced-provision-name]
+      :or    {edubaseall-send-map      {}
+              designation-f            (fn [& args] nil)
               area-split-f             (fn [& args] nil)
+              in-area-la-codes         #{}
               sen-unit-name            "(SEN Unit)"
               resourced-provision-name "(Resourced Provision)"}
       :as    cfg}]
@@ -485,12 +535,14 @@
                              :resourced-provision-indicator resourced-provision-indicator
                              :sen-setting                   sen-setting}
         ;; Get any override or manual setting information for this sen2-estab
-        override            (get (sen2-estab-settings-override cfg) sen2-estab)
-        manual              (get (sen2-estab-settings-manual cfg) sen2-estab)
+        override            (get (sen2-estab-settings-override
+                                  ::sen2-estab-settings-override
+                                  sen2-estab-settings-override') sen2-estab)
+        manual              (get (sen2-estab-settings-manual
+                                  ::sen2-estab-settings-manual
+                                  sen2-estab-settings-manual') sen2-estab)
         ;; Get GIAS information for this sen2-estab
-        edubaseall-send     ((or edubaseall-send-map
-                                 (gias/edubaseall-send->map cfg))
-                             urn)
+        edubaseall-send     (edubaseall-send-map urn)
         estab-name-via-gias (let [establishment-name (:establishment-name edubaseall-send)]
                               (when establishment-name
                                 (str establishment-name
@@ -502,7 +554,9 @@
                              :resourced-provision-indicator resourced-provision-indicator
                              :sen-setting                   sen-setting}
         ;; Lookup estab-cat for this estab-type
-        estab-cat-via-gias  (get (estab-type-to-estab-cat cfg) estab-type)
+        estab-cat-via-gias  (get (estab-type-to-estab-cat
+                                  ::estab-type-to-estab-cat
+                                  estab-type-to-estab-cat') estab-type)
         ;; Derive estab-name: Precedence: override > gias (with SENU|RP indicated) > manual > (SEN setting)
         estab-name          (or (get override :estab-name)
                                 estab-name-via-gias
@@ -515,7 +569,7 @@
                                 (when (not-any? boolean (vals sen2-estab)) "UKN")
                                 "XxX") ; Avoid "XxX" via manual or override.
         ;; Derive designation if estab-cat to be designated: Set to "XxX" if have truthy values for sen2-estab keys but can't derive
-        designate?          (get-in (estab-cats cfg) [estab-cat :designate?])
+        designate?          (get-in (estab-cats ::estab-cats estab-cats') [estab-cat :designate?])
         designation         (when designate? (or (get override :designation)
                                                  (designation-f (assoc sen2-estab
                                                                        :estab-cat estab-cat
@@ -525,7 +579,7 @@
                                                  (when (not-any? boolean (vals sen2-estab)) "UKN") ; Only possible if estab-cat "UKN" designated!?
                                                  "XxX")) ; Avoid "XxX" via manual, designation-f, or override.
         ;; Derive `:area` for `:estab-cat`s to be split by area:
-        split-area?         (get-in (estab-cats cfg) [estab-cat :split-area?])
+        split-area?         (get-in (estab-cats ::estab-cats estab-cats') [estab-cat :split-area?])
         la-code             (or (get override :la-code)
                                 (get edubaseall-send :la-code)
                                 (get manual :la-code))
