@@ -1,0 +1,10 @@
+abbreviation,order,name,label,definition
+GEN,0,General,General,General
+SEMH,1,"Social, Emotional & Mental Health Needs",SEMH,SEMH
+COIN,2,Communication & Interaction Needs,COIN,SLCN
+HCOIN,3,High Communication & Interaction Needs,High COIN,ASD
+HCOIN+SEMH,4,High COIN & SEMH,High COIN & SEMH,ASD plus SEMH
+SPN,5,Sensory & Physical Disability Needs,Sensory & Physical,HI or VI or PD
+C+L,6,Cognition & Learning Needs,Cognition & Learning,MLD or SpLD
+HC+L,7,High Cognition & Learning Needs,High Cognition & Learning,SLD or PMLD
+CS+CN,8,Complex Social & Care Needs,Complex Social & Care,"ASD, plus SLD or PMLD"
