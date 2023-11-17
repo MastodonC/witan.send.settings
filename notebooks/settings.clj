@@ -65,7 +65,7 @@
 ;;; ### Setting definitions
 ;; Details on (all) the settings is in the config, Definitions of the
 ;; three `estab-cat`, `designation` & `area` components are contained
-;; in the config, and can me extracted as datasets or maps with
+;; in the config, and can be extracted as datasets or maps with
 ;; correspondingly named functions. For example:
 ^{::clerk/viewer clerk/table}
 (-> (settings/estab-cats-ds standard-cfg-for-879)
@@ -100,12 +100,12 @@
 ;;   the `estab-cat`, `designation` and `area` abbreviations from a
 ;;   `setting` abbreviation.
 ;; - Configuration is via `cfg` map argument (or trailing key-value
-;;   pairs)
+;;   pairs).
 ;; - Lookups (e.g. for setting component definitions or mappings) are
 ;;   used as maps but can be specified as maps, datasets or CSV files.
 ;; - If specifying by files then recommend using `settings/parse-cfg`
 ;;   to read the files into the config, as otherwise the files will be
-;;   read on every invocation.)
+;;   read on every invocation.
 
 ;; For details, read on…
 
@@ -119,13 +119,14 @@
 ;;; ### `estab-cat`
 ;; The establishment category `estab-cat` is the first component of the setting.
 
-;;; #### GIAS
+;;; #### GIAS: URN to estab-type
 ;; Establishments are first mapped to their GIAS establishment type by
 ;; looking up their URN in the mapping of URNs to GIAS "edubaseall"
 ;; SEND attributes:
 ;; - The map must be specified in the `::settings/edubaseall-send-map` config key-value pair.
-;; - `(witan.gias/edubaseall-send->map)` returns the map read from the current edubaseall.csv file.
-;; - Note that the edubaseall.csv if large!
+;; - `(witan.gias/edubaseall-send->map)` returns a map derived from the current edubaseall.csv file.
+;;   (Other edubaseall files can be specified in options.)
+;; - Note that the edubaseall.csv is quite large at about 65MB, and may take a second to read.
 
 ^{::clerk/visibility {:result :hide}}
 (def edubaseall-send-map (gias/edubaseall-send->map))
@@ -146,8 +147,8 @@
 ;; - as a dataset
 ;; - or via CSV filepath
 
-;;; ##### URNs wtih SENU|RP indicators
-;; Here's a simple example (as a dataset) for a single estab-type:
+;; Here's a simple example of a `::settings/estab-type-to-estab-cat`
+;; lookup for a single estab-type (as a dataset):
 ^{::clerk/viewer clerk/table}
 (def estab-type-to-estab-cat-ds-1
   (tc/dataset [{:type-of-establishment-name    "Foundation special school"
@@ -157,7 +158,7 @@
                 :estab-cat                     "SpMdA"}]))
 
 
-;; which we can use to get the setting for a `sen2-estab` as follows:
+;; …which we can use to get the setting for a `sen2-estab` as follows:
 ^{::clerk/viewer clerk/md}
 (settings/sen2-estab->setting
  {:urn                           "113644"
@@ -168,6 +169,7 @@
  ::settings/edubaseall-send-map     edubaseall-send-map
  ::settings/estab-type-to-estab-cat estab-type-to-estab-cat-ds-1)
 
+;;; #### Partial `sen2-estab` maps
 ;; The `sen2-estab` map is destructured within `sen2-estab->setting`
 ;; and missing/nil keys set to `nil` (`:urn`, `:ukprn` &
 ;; `:sen-setting`) and `false` (`:sen-unit-indicator` &
@@ -203,10 +205,9 @@
 ;; 1. Specify which `estab-cat`s are to be designated.
 ;; 2. Specify a function to derive the designations.
 ;;
-;; #1 is achieved via estab-cat attributes for each `estab-cat`, again specified in the `::settings/estab-cats` config key:
-;; - as a map
-;; - as a dataset
-;; - or via CSV filepath
+;; #1 is achieved via estab-cat attributes for each `estab-cat`, again
+;; specified in the `::settings/estab-cats` config key; as a map,
+;; dataset or via CSV filepath.
 ;;
 ;; …with the `:designate?` column/key set to `true` for the `estab-cat` `abbreviation`s to designate.
 ;; 
@@ -280,11 +281,9 @@
 
 ;; For these establishments, the `estab-name`, `estab-cat`,
 ;; `designation` and `la-code` (from which any `area` split is
-;; determined) must be specified manually, via map
-;; specified in the `::settings/sen2-estab-settings-manual` config key:
-;; - as a map
-;; - as a dataset
-;; - or via CSV filepath
+;; determined) must be specified manually, via map specified in the
+;; `::settings/sen2-estab-settings-manual` config key; as a map, a
+;; dataset or via CSV filepath.
 
 ;; For example, for the two cases above:
 ^{::clerk/viewer (partial clerk/table {::clerk/width :full})}
