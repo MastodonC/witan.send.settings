@@ -84,11 +84,11 @@
   "Reads file at `filepath` into dataset using `ds/->dataset` with `options`.
    Paths beginning \"resources/\" are interpreted as resources."
   [filepath options]
-  (with-open [in (-> (if (re-find #"^resources/" filepath)
-                       (io/resource (string/replace filepath #"^resources/" "" ))
-                       filepath)
-                     io/file
-                     io/input-stream)]
+  (let [in (-> (if (re-find #"^resources/" filepath)
+                 (io/resource (string/replace filepath #"^resources/" "" ))
+                 filepath)
+               io/file
+               io/input-stream)]
     (ds/->dataset in (merge {:dataset-name filepath} options))))
 
 (def setting-defs-csv->ds-opts
