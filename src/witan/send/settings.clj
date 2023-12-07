@@ -546,7 +546,7 @@
                               urn
                               (edubaseall-send-map urn)
                               ukprn
-                              (first (filter #(= ukprn (:ukprn %)) (vals edubaseall-send-map)))
+                              (some #(= ukprn (:ukprn %)) (vals edubaseall-send-map))
                               :else
                               nil)
         estab-name-via-gias (let [establishment-name (:establishment-name edubaseall-send)]
