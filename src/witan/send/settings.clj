@@ -542,7 +542,13 @@
                                   ::sen2-estab-settings-manual
                                   sen2-estab-settings-manual') sen2-estab)
         ;; Get GIAS information for this sen2-estab
-        edubaseall-send     (edubaseall-send-map urn)
+        edubaseall-send     (cond
+                              urn
+                              (edubaseall-send-map urn)
+                              ukprn
+                              (first (filter #(= ukprn (:ukprn %)) (vals edubaseall-send-map)))
+                              :else
+                              nil)
         estab-name-via-gias (let [establishment-name (:establishment-name edubaseall-send)]
                               (when establishment-name
                                 (str establishment-name
