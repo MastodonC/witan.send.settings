@@ -546,7 +546,7 @@
                               urn
                               (edubaseall-send-map urn)
                               ukprn
-                              (some #(= ukprn (:ukprn %)) (vals edubaseall-send-map))
+                              (some #(when (= ukprn (:ukprn %)) %) (vals edubaseall-send-map))
                               :else
                               nil)
         estab-name-via-gias (let [establishment-name (:establishment-name edubaseall-send)]
@@ -616,4 +616,3 @@
 (defn sen2-estab->setting
   [sen2-estab & {:as cfg}]
   (:setting (sen2-estab->setting-map sen2-estab cfg)))
-
