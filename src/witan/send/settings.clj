@@ -242,7 +242,8 @@
         (tc/rename-columns {:estab-cat-abbreviation   :estab-cat
                             :designation-abbreviation :designation
                             :area-abbreviation        :area})
-        (tc/select-columns [:abbreviation :order :name :label :definition :estab-cat :designation :area]))))
+        (tc/select-columns [:abbreviation :order :name :label :definition :estab-cat :designation :area])
+        (tc/set-dataset-name "settings"))))
 
 (defn settings-ds
   "Dataset of setting abbreviations and attributes.
