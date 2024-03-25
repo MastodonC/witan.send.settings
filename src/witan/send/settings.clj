@@ -242,7 +242,8 @@
         (tc/rename-columns {:estab-cat-abbreviation   :estab-cat
                             :designation-abbreviation :designation
                             :area-abbreviation        :area})
-        (tc/select-columns [:abbreviation :order :name :label :definition :estab-cat :designation :area]))))
+        (tc/select-columns [:abbreviation :order :name :label :definition :estab-cat :designation :area])
+        (tc/set-dataset-name "settings"))))
 
 (defn settings-ds
   "Dataset of setting abbreviations and attributes.
@@ -279,16 +280,13 @@
    Relies on area abbreviations not clashing with designation abbreviations.
    Collection of areas can be specified (first supplied is used):
    - directly via `:area-abbreviations` key
-   - via keys of areas map specified in `:areas` key
-   or (if not) is via keys of areas map derived from settings cfg via `(areas cfg)`."
+   - via ::areas defined in settings cfg (via `(areas cfg)`)."
   [& {setting-split-regex' ::setting-split-regex
       area-abbreviations   :area-abbreviations ; Note deliberately NOT namespaced
-      areas'               ::areas
       :as                  cfg}]
   (or setting-split-regex'
       (let [area-abbreviations' (or area-abbreviations
-                                    (keys (or areas'
-                                              (areas cfg))))]
+                                    (keys (areas cfg)))]
         (re-pattern (str "^(?<estabCat>[^_]+)"
                          "_??(?<designation>[^_]+)??"
                          "_?(?<area>" (string/join "|" area-abbreviations') ")?$")))))
