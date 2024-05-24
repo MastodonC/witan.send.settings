@@ -8,6 +8,6 @@
                                                                              org.apache.poi/poi-ooxml-schemas
                                                                              org.apache.poi/poi
                                                                              org.apache.poi/poi-ooxml]}
-                               io.github.MastodonC/witan.gias {:git/sha "303374c15a41b6859912381b4d9ad7391a5f3ac8"}
+                               io.github.MastodonC/witan.gias {:git/sha "7f8668c9dac7aa1f93505f27f5c29a75721f769b"}
                                ;; Clerk only required to run the demo notebooks. Not required by src namespaces.
                                io.github.nextjournal/clerk    {:mvn/version "0.15.957"}}}}}
