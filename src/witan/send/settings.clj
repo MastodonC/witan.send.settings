@@ -241,23 +241,35 @@
                                                       (tc/rename-columns (prepend-str-to-keyword-f "area")))))))
         ;; Derive setting `:abbreviation`
         (tc/map-columns :abbreviation [:estab-cat-abbreviation :designation-abbreviation :area-abbreviation]
-                        (fn [& args] (clojure.string/join "_" (filter some? args))))
+                        (fn [& args] (string/join "_" (filter some? args))))
         (tc/order-by [:estab-cat-order :designation-order :area-order])
         (tc/add-column :order (iterate inc 1))
         ;; Derive setting attributes from corresponding estab-cat, designation & area attributes (if available)
         (tc/map-rows (fn [{:keys [estab-cat-name       designation-name       area-name
                                   estab-cat-label      designation-label      area-label
                                   estab-cat-definition designation-definition area-definition]}]
-                       (let [setting-attr-f (fn [estab-cat-attr designation-attr area-attr]
-                                              (str estab-cat-attr
-                                                   (when designation-attr (format " - %s" designation-label))
-                                                   (when area-attr        (format " (%s)" area-label))))]
-                         (merge (when estab-cat-name
-                                  {:name       (setting-attr-f estab-cat-name       designation-name       area-name      )})
-                                (when estab-cat-label
-                                  {:label      (setting-attr-f estab-cat-label      designation-label      area-label     )})
-                                (when estab-cat-definition
-                                  {:definition (setting-attr-f estab-cat-definition designation-definition area-definition)})))))
+                       (merge (when estab-cat-name
+                                {:name (string/join " " (filter some? [area-name
+                                                                       estab-cat-name
+                                                                       designation-name]))})
+                              (when estab-cat-label
+                                {:label (str estab-cat-label
+                                             (when area-label
+                                               (format " (%s)" area-label))
+                                             (when designation-label
+                                               (format " - %s" designation-label)))})
+                              (when estab-cat-definition
+                                {:definition (str (when area-definition
+                                                    (-> area-definition
+                                                        (string/replace #".$" "")
+                                                        (str " ")))
+                                                  (-> estab-cat-definition
+                                                      (string/replace #".$" ""))
+                                                  (if designation-definition
+                                                    (format
+                                                     "; providing for (designation group) %s"
+                                                     designation-definition)
+                                                    "."))}))))
         ;; Tidy dataset
         (tc/select-columns settings-ds-cols)
         (tc/set-dataset-name "settings"))))
