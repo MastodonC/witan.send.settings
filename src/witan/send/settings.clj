@@ -251,7 +251,7 @@
                        (let [setting-attr-f (fn [estab-cat-attr designation-attr area-attr]
                                               (str estab-cat-attr
                                                    (when designation-attr (format " - %s" designation-label))
-                                                   (when area-attr        (format " [%s]" area-label))))]
+                                                   (when area-attr        (format " (%s)" area-label))))]
                          (merge (when estab-cat-name
                                   {:name       (setting-attr-f estab-cat-name       designation-name       area-name      )})
                                 (when estab-cat-label
