@@ -8,6 +8,17 @@
 
 
 ;;; # Utility functions
+(defn resource-or-file->dataset
+  "Reads file at `filepath` into dataset using `ds/->dataset` with `options`.
+   Paths beginning \"resources/\" are interpreted as resources."
+  [filepath options]
+  (let [in (-> (if (re-find #"^resources/" filepath)
+                 (io/resource (string/replace filepath #"^resources/" "" ))
+                 filepath)
+               io/file
+               io/input-stream)]
+    (ds/->dataset in (merge {:dataset-name filepath} options))))
+
 (defn- compare-mapped-keys
   [m k1 k2]
   (compare [(get m k1) k1]
@@ -80,19 +91,8 @@
 
 
 ;;; # Setting Definitions
-(defn resource-or-file->dataset
-  "Reads file at `filepath` into dataset using `ds/->dataset` with `options`.
-   Paths beginning \"resources/\" are interpreted as resources."
-  [filepath options]
-  (let [in (-> (if (re-find #"^resources/" filepath)
-                 (io/resource (string/replace filepath #"^resources/" "" ))
-                 filepath)
-               io/file
-               io/input-stream)]
-    (ds/->dataset in (merge {:dataset-name filepath} options))))
-
-(def setting-defs-csv->ds-opts
-  "Common options for `ds/->dataset` read of setting defs CSV files."
+(def base-def-csv-read-options
+  "Base options for `ds/->dataset` read of setting definition CSV files."
   {:file-type        :csv
    :separator        ","
    :header-row?      :true
@@ -103,8 +103,23 @@
                       :label        :string
                       :definition   :string}})
 
+(def base-def-ds-col-names
+  "Base column names for definitions dataset."
+  ((comp keys :parser-fn) base-def-csv-read-options))
+
 
 ;;; ## `:estab-cat`: Establishment Categories
+(def estab-cats-csv-read-options
+  "Options for `ds/->dataset` read of estab-cat definition CSV files."
+  (merge-with merge
+              base-def-csv-read-options
+              {:parser-fn {:designate?  :boolean
+                           :split-area? :boolean}}))
+
+(def estab-cats-ds-col-names
+  "Column names for estab-cat definitions dataset."
+  ((comp keys :parser-fn) estab-cats-csv-read-options))
+
 (defn estab-cats-ds
   "Return `estab-cats` dataset extracted/derived from `::estab-cats` key as follows:
    - value a map: dataset reconstructed from map
@@ -112,13 +127,9 @@
    - value a string: file at that path read as dataset"
   [& {::keys [estab-cats]}]
   (let [ds-template (tc/dataset nil {:dataset-name "estab-cats"
-                                     :column-names (concat ((comp keys :parser-fn) setting-defs-csv->ds-opts)
-                                                           [:designate? :split-area?])})]
+                                     :column-names estab-cats-ds-col-names})]
     (cond
-      (string? estab-cats)     (resource-or-file->dataset estab-cats (merge-with merge
-                                                                                 setting-defs-csv->ds-opts
-                                                                                 {:parser-fn {:designate?  :boolean
-                                                                                              :split-area? :boolean}}))
+      (string? estab-cats)     (resource-or-file->dataset estab-cats estab-cats-csv-read-options)
       (tc/dataset? estab-cats) estab-cats
       (map? estab-cats)        (tc/concat-copying ds-template (map->ds estab-cats :keys-col-name :abbreviation))
       :else                    ds-template)))
@@ -143,9 +154,9 @@
    - value a string: file at that path read as dataset"
   [& {::keys [designations]}]
   (let [ds-template (tc/dataset nil {:dataset-name "designation"
-                                     :column-names ((comp keys :parser-fn) setting-defs-csv->ds-opts)})]
+                                     :column-names base-def-ds-col-names})]
     (cond
-      (string? designations)     (resource-or-file->dataset designations setting-defs-csv->ds-opts)
+      (string? designations)     (resource-or-file->dataset designations base-def-csv-read-options)
       (tc/dataset? designations) designations
       (map? designations)        (tc/concat-copying ds-template (map->ds designations :keys-col-name :abbreviation))
       :else                      ds-template)))
@@ -157,7 +168,7 @@
    - value a string: file at that path read as dataset and made into a map keyed on `:abbreviation`"
   [& {::keys [designations]}]
   (as-> designations $
-    (if (string? $)     (resource-or-file->dataset $ setting-defs-csv->ds-opts) $)
+    (if (string? $)     (resource-or-file->dataset $ base-def-csv-read-options) $)
     (if (tc/dataset? $) (ds->sorted-map-by $ :abbreviation {:order-col :order}) $)
     (if (map? $) $ {})))
 
@@ -170,9 +181,9 @@
    - value a string: file at that path read as dataset"
   [& {::keys [areas]}]
   (let [ds-template (tc/dataset nil {:dataset-name "areas"
-                                     :column-names ((comp keys :parser-fn) setting-defs-csv->ds-opts)})]
+                                     :column-names base-def-ds-col-names})]
     (cond
-      (string? areas)     (resource-or-file->dataset areas setting-defs-csv->ds-opts)
+      (string? areas)     (resource-or-file->dataset areas base-def-csv-read-options)
       (tc/dataset? areas) areas
       (map? areas)        (tc/concat-copying ds-template (map->ds areas :keys-col-name :abbreviation))
       :else               ds-template)))
@@ -184,13 +195,22 @@
    - value a string: file at that path read as dataset and made into a map keyed on `:abbreviation`"
   [& {::keys [areas]}]
   (as-> areas $
-    (if (string? $)     (resource-or-file->dataset $ setting-defs-csv->ds-opts) $)
+    (if (string? $)     (resource-or-file->dataset $ base-def-csv-read-options) $)
     (if (tc/dataset? $) (ds->sorted-map-by $ :abbreviation {:order-col :order}) $)
     (if (map? $) $ {})))
 
 
 ;;; ## Settings
 ;; Combining `:estab-cat`, `:designation` and `:area`:
+(def settings-ds-cols
+  "Column names for settings dataset."
+  (for [prefix           [nil "estab-cat" "designation" "area"]
+        base-ds-col-name base-def-ds-col-names]
+    (->> base-ds-col-name
+         name
+         (str prefix (when prefix "-"))
+         keyword)))
+
 (defn cfg->settings-ds
   "Derive dataset of setting abbreviations and attributes from:
    - estab-cat   definitions from `::estab-cats`
@@ -221,28 +241,37 @@
                                                       (tc/rename-columns (prepend-str-to-keyword-f "area")))))))
         ;; Derive setting `:abbreviation`
         (tc/map-columns :abbreviation [:estab-cat-abbreviation :designation-abbreviation :area-abbreviation]
-                        (fn [& args] (clojure.string/join "_" (filter some? args))))
+                        (fn [& args] (string/join "_" (filter some? args))))
         (tc/order-by [:estab-cat-order :designation-order :area-order])
         (tc/add-column :order (iterate inc 1))
         ;; Derive setting attributes from corresponding estab-cat, designation & area attributes (if available)
         (tc/map-rows (fn [{:keys [estab-cat-name       designation-name       area-name
                                   estab-cat-label      designation-label      area-label
                                   estab-cat-definition designation-definition area-definition]}]
-                       (let [setting-attr-f (fn [estab-cat-attr designation-attr area-attr]
-                                              (str estab-cat-attr
-                                                   (when designation-attr (format " - %s" designation-label))
-                                                   (when area-attr (format " [%s]" area-label))))]
-                         (merge (when estab-cat-name
-                                  {:name (setting-attr-f estab-cat-name       designation-name       area-name      )})
-                                (when estab-cat-label
-                                  {:label (setting-attr-f estab-cat-label      designation-label      area-label     )})
-                                (when estab-cat-definition
-                                  {:definition (setting-attr-f estab-cat-definition designation-definition area-definition)})))))
+                       (merge (when estab-cat-name
+                                {:name (string/join " " (filter some? [area-name
+                                                                       estab-cat-name
+                                                                       designation-name]))})
+                              (when estab-cat-label
+                                {:label (str estab-cat-label
+                                             (when area-label
+                                               (format " (%s)" area-label))
+                                             (when designation-label
+                                               (format " - %s" designation-label)))})
+                              (when estab-cat-definition
+                                {:definition (str (when area-definition
+                                                    (-> area-definition
+                                                        (string/replace #".$" "")
+                                                        (str " ")))
+                                                  (-> estab-cat-definition
+                                                      (string/replace #".$" ""))
+                                                  (if designation-definition
+                                                    (format
+                                                     "; providing for (designation group) %s"
+                                                     designation-definition)
+                                                    "."))}))))
         ;; Tidy dataset
-        (tc/rename-columns {:estab-cat-abbreviation   :estab-cat
-                            :designation-abbreviation :designation
-                            :area-abbreviation        :area})
-        (tc/select-columns [:abbreviation :order :name :label :definition :estab-cat :designation :area])
+        (tc/select-columns settings-ds-cols)
         (tc/set-dataset-name "settings"))))
 
 (defn settings-ds
@@ -250,8 +279,7 @@
    Derived from estab-cat, designation & area definitions unless specified in truthy `::settings` val."
   [& {settings' ::settings
       :as       cfg}]
-  (let [settings-ds-cols [:abbreviation :order :name :label :definition :estab-cat :designation :area]
-        ds-template      (tc/dataset nil {:dataset-name "settings"
+  (let [ds-template      (tc/dataset nil {:dataset-name "settings"
                                           :column-names settings-ds-cols})]
     (cond
       (nil? settings')        (-> cfg
@@ -300,7 +328,7 @@
 
 
 ;;; ## Manual and Override settings
-(def sen2-estab-settings-csv->ds-opts
+(def sen2-estab-settings-csv-read-options
   "Options for `ds/->dataset` read of sen2-estab setting CSV files."
   {:file-type        :csv
    :separator        ","
@@ -313,9 +341,14 @@
 	              :sen-unit-indicator            :boolean
 	              :resourced-provision-indicator :boolean
 	              :sen-setting                   :string
+	              :estab-name                    :string
 	              :estab-cat                     :string
                       :designation                   :string
                       :la-code                       :string}})
+
+(def sen2-estab-settings-ds-col-names
+  "Column names for sen2-estab setting dataset."
+  ((comp keys :parser-fn) sen2-estab-settings-csv-read-options))
 
 (defn sen2-estab-settings-manual-ds
   "Dataset mapping SEN2 Estab keys to manual settings.
@@ -323,9 +356,9 @@
   (SEN2 Estab = URN|UKPRN split by SENU|RP augmented by SEN2 <SENsetting>s)"
   [& {::keys [sen2-estab-settings-manual]}]
   (let [ds-template (tc/dataset nil {:dataset-name "sen2-estab-settings-manual"
-                                     :column-names ((comp keys :parser-fn) sen2-estab-settings-csv->ds-opts)})]
+                                     :column-names sen2-estab-settings-ds-col-names})]
     (cond
-      (string? sen2-estab-settings-manual)     (resource-or-file->dataset sen2-estab-settings-manual sen2-estab-settings-csv->ds-opts)
+      (string? sen2-estab-settings-manual)     (resource-or-file->dataset sen2-estab-settings-manual sen2-estab-settings-csv-read-options)
       (tc/dataset? sen2-estab-settings-manual) sen2-estab-settings-manual
       (map? sen2-estab-settings-manual)        (tc/concat-copying ds-template (map->ds sen2-estab-settings-manual))
       :else                                    ds-template)))
@@ -336,7 +369,7 @@
    (SEN2 Estab = URN|UKPRN split by SENU|RP augmented by SEN2 <SENsetting>s)"
   [& {::keys [sen2-estab-settings-manual]}]
   (as-> sen2-estab-settings-manual $
-    (if (string? $)     (resource-or-file->dataset $ sen2-estab-settings-csv->ds-opts) $)
+    (if (string? $)     (resource-or-file->dataset $ sen2-estab-settings-csv-read-options) $)
     (if (tc/dataset? $) (ds->hash-map $ sen2-estab-keys) $)
     (if (map? $) $ {})))
 
@@ -346,9 +379,9 @@
   (SEN2 Estab = URN|UKPRN split by SENU|RP augmented by SEN2 <SENsetting>s)"
   [& {::keys [sen2-estab-settings-override]}]
   (let [ds-template (tc/dataset nil {:dataset-name "sen2-estab-settings-override"
-                                     :column-names ((comp keys :parser-fn) sen2-estab-settings-csv->ds-opts)})]
+                                     :column-names sen2-estab-settings-ds-col-names})]
     (cond
-      (string? sen2-estab-settings-override)     (resource-or-file->dataset sen2-estab-settings-override sen2-estab-settings-csv->ds-opts)
+      (string? sen2-estab-settings-override)     (resource-or-file->dataset sen2-estab-settings-override sen2-estab-settings-csv-read-options)
       (tc/dataset? sen2-estab-settings-override) sen2-estab-settings-override
       (map? sen2-estab-settings-override)        (tc/concat-copying ds-template (map->ds sen2-estab-settings-override))
       :else                                      ds-template)))
@@ -359,7 +392,7 @@
    (SEN2 Estab = URN|UKPRN split by SENU|RP augmented by SEN2 <SENsetting>s)"
   [& {::keys [sen2-estab-settings-override]}]
   (as-> sen2-estab-settings-override $
-    (if (string? $)     (resource-or-file->dataset $ sen2-estab-settings-csv->ds-opts) $)
+    (if (string? $)     (resource-or-file->dataset $ sen2-estab-settings-csv-read-options) $)
     (if (tc/dataset? $) (ds->hash-map $ sen2-estab-keys) $)
     (if (map? $) $ {})))
 
@@ -370,8 +403,8 @@
 	              :resourced-provision-indicator
 	              :sen-setting])
 
-(def estab-type-to-estab-cat-csv->ds-opts
-  "Options for `ds/->dataset` read of estab-type-to-estab-cat-csv CSV files."
+(def estab-type-to-estab-cat-csv-read-options
+  "Options for `ds/->dataset` read of estab-type-to-estab-cat CSV files."
   {:file-type   :csv
    :separator   ","
    :header-row? :true
@@ -382,15 +415,19 @@
 	         :sen-setting                   :string
 	         :estab-cat                     :string}})
 
+(def estab-type-to-estab-cat-ds-col-names
+  "Column names for estab-type-to-estab-cat dataset."
+  ((comp keys :parser-fn) estab-type-to-estab-cat-csv-read-options))
+
 (defn estab-type-to-estab-cat-ds
   "Dataset mapping Estab Types to `:estab-cat`s.
    Extracted/derived from `::estab-type-to-estab-cat` key.
    (Estab Type = GIAS Establishment Types split by SENU|RP augmented by SEN2 <SENsetting>s)"
   [& {::keys [estab-type-to-estab-cat]}]
   (let [ds-template (tc/dataset nil {:dataset-name "estab-type-to-estab-cat"
-                                     :column-names ((comp keys :parser-fn) estab-type-to-estab-cat-csv->ds-opts)})]
+                                     :column-names estab-type-to-estab-cat-ds-col-names})]
     (cond
-      (string? estab-type-to-estab-cat)     (resource-or-file->dataset estab-type-to-estab-cat estab-type-to-estab-cat-csv->ds-opts)
+      (string? estab-type-to-estab-cat)     (resource-or-file->dataset estab-type-to-estab-cat estab-type-to-estab-cat-csv-read-options)
       (tc/dataset? estab-type-to-estab-cat) estab-type-to-estab-cat
       (map? estab-type-to-estab-cat)        (tc/concat-copying ds-template (map->ds estab-type-to-estab-cat :vals-col-name :estab-cat))
       :else                                 ds-template)))
@@ -401,7 +438,7 @@
    (Estab Type = GIAS Establishment Types split by SENU|RP augmented by SEN2 <SENsetting>s)"
   [& {::keys [estab-type-to-estab-cat]}]
   (as-> estab-type-to-estab-cat $
-    (if (string? $)     (resource-or-file->dataset $ estab-type-to-estab-cat-csv->ds-opts) $)
+    (if (string? $)     (resource-or-file->dataset $ estab-type-to-estab-cat-csv-read-options) $)
     (if (tc/dataset? $) (-> $ (ds->hash-map estab-type-keys) (update-vals :estab-cat)) $)
     (if (map? $) $ {})))
 
