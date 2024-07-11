@@ -496,25 +496,32 @@
 
 
 ;;; # Configs
-(defn parse-cfg
+(defn parse-cfg-files
   "Parse settings configuration map `cfg` replacing string filepath
    values of selected keys with the dataset read from the file."
+  [& {:as cfg}]
+  (let [parse-string-v (fn [k v f] (if (string? v) (f k v) v))]
+    (reduce-kv
+     (fn [m k v]
+       (assoc m k (case k
+                    ::estab-cats                   (parse-string-v k v estab-cats-ds)
+                    ::designations                 (parse-string-v k v designations-ds)
+                    ::areas                        (parse-string-v k v areas-ds)
+                    ::sen2-estab-settings-manual   (parse-string-v k v sen2-estab-settings-manual-ds)
+                    ::sen2-estab-settings-override (parse-string-v k v sen2-estab-settings-override-ds)
+                    ::estab-type-to-estab-cat      (parse-string-v k v estab-type-to-estab-cat-ds)
+                    v)))
+     {}
+     cfg)))
+
+(defn parse-cfg
+  "Parse settings configuration map `cfg` replacing string filepath
+   values of selected keys with the dataset read from the file,
+   and add ::edubaseall-send-map from GIAS if not already in `cfg`."
   [& {::keys [edubaseall-send-map]
       :as    cfg}]
   (merge
-   (let [parse-string-v (fn [k v f] (if (string? v) (f k v) v))]
-     (reduce-kv
-      (fn [m k v]
-        (assoc m k (case k
-                     ::estab-cats                   (parse-string-v k v estab-cats-ds)
-                     ::designations                 (parse-string-v k v designations-ds)
-                     ::areas                        (parse-string-v k v areas-ds)
-                     ::sen2-estab-settings-manual   (parse-string-v k v sen2-estab-settings-manual-ds)
-                     ::sen2-estab-settings-override (parse-string-v k v sen2-estab-settings-override-ds)
-                     ::estab-type-to-estab-cat      (parse-string-v k v estab-type-to-estab-cat-ds)
-                     v)))
-      {}
-      cfg))
+   (parse-cfg-files cfg)
    (when (nil? edubaseall-send-map) {::edubaseall-send-map (gias/edubaseall-send->map cfg)})))
 
 (def standard-cfg-files
