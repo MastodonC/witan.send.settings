@@ -153,7 +153,7 @@
    - value a dataset: returned as-is
    - value a string: file at that path read as dataset"
   [& {::keys [designations]}]
-  (let [ds-template (tc/dataset nil {:dataset-name "designation"
+  (let [ds-template (tc/dataset nil {:dataset-name "designations"
                                      :column-names base-def-ds-col-names})]
     (cond
       (string? designations)     (resource-or-file->dataset designations base-def-csv-read-options)
