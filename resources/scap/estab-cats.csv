@@ -1,5 +1,5 @@
 abbreviation,order,name,label,definition,designate?,split-area?
-UR,1,SEN units and resourced provision in mainstream schools,SEN Units & Resourced Provision,SEN units & resourced provision in mainstream schools,FALSE,FALSE
-IS,2,Independent special schools,Independent Special Schools,Independent schools (independent schools and independent special schools) ,FALSE,FALSE
-SS,3,"Special schools (LA-maintained, special academies, non-maintained special schools)",State Funded Special Schools,"State-funded special schools (LA-maintained schools, special academies, non-maintained special schools) ",FALSE,FALSE
-AP,4,"Alternative provision (PRUs, AP academies and independent AP)",Alternate Provision,"Alternative provision (PRUs, AP academies and any other AP)",FALSE,FALSE
+UR,1,SEN units and resourced provision in mainstream schools,SEN Units & Resourced Provision,SEN units & resourced provision in mainstream schools.,FALSE,FALSE
+IN,2,Independent schools (independent schools and independent special schools),Independent Schools,Independent schools (independent schools and independent special schools).,FALSE,FALSE
+SS,3,"Special schools (LA-maintained, special academies, non-maintained special schools)",State Funded Special Schools,"State-funded special schools (LA-maintained schools, special academies, non-maintained special schools).",FALSE,FALSE
+AP,4,"Alternative provision (PRUs, AP academies and independent AP)",Alternative Provision,"Alternative provision (PRUs, AP academies and any other AP).",FALSE,FALSE
