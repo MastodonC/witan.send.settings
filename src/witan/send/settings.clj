@@ -12,11 +12,11 @@
   "Reads file at `filepath` into dataset using `ds/->dataset` with `options`.
    Paths beginning \"resources/\" are interpreted as resources."
   [filepath options]
-  (let [in (-> (if (re-find #"^resources/" filepath)
-                 (io/resource (string/replace filepath #"^resources/" "" ))
-                 filepath)
-               io/file
-               io/input-stream)]
+  (with-open [in (-> (if (re-find #"^resources/" filepath)
+                       (io/resource (string/replace filepath #"^resources/" "" ))
+                       filepath)
+                     io/file
+                     io/input-stream)]
     (ds/->dataset in (merge {:dataset-name filepath} options))))
 
 (defn- compare-mapped-keys
