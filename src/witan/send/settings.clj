@@ -303,21 +303,31 @@
     (map? settings')        settings'
     :else                   {}))
 
-(defn setting-split-regexp
+(defn setting-components-regex
   "Return regex pattern for splitting setting abbreviations into components.
    Relies on area abbreviations not clashing with designation abbreviations.
    Collection of areas can be specified (first supplied is used):
    - directly via `:area-abbreviations` key
    - via ::areas defined in settings cfg (via `(areas cfg)`)."
-  [& {setting-split-regex' ::setting-split-regex
-      area-abbreviations   :area-abbreviations ; Note deliberately NOT namespaced
-      :as                  cfg}]
-  (or setting-split-regex'
+  [& {setting-components-regex' ::setting-components-regex
+      area-abbreviations        :area-abbreviations ; Note deliberately NOT namespaced
+      :as                       cfg}]
+  (or setting-components-regex'
       (let [area-abbreviations' (or area-abbreviations
                                     (keys (areas cfg)))]
         (re-pattern (str "^(?<estabCat>[^_]+)"
                          "_??(?<designation>[^_]+)??"
                          "_?(?<area>" (string/join "|" area-abbreviations') ")?$")))))
+
+(defn setting->components
+  "Given `setting` abbreviation and `setting-components-regex`, returns map of setting components."
+  [setting setting-components-regex]
+  (let [[setting estab-cat designation area]
+        (re-find setting-components-regex setting)]
+    {:setting     setting
+     :estab-cat   estab-cat
+     :designation designation
+     :area        area}))
 
 
 
