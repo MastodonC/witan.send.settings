@@ -56,16 +56,16 @@ Higher education institutions,"Art, Design and Performing Arts College",FALSE,FA
 University technical college,,FALSE,FALSE,,GFE
 Special post 16 institution,,FALSE,FALSE,,SP16
 Special post 16 institution,Specialist Designated College,FALSE,FALSE,,SP16
-Secure units,,FALSE,FALSE,,OLAS
-Academy secure 16 to 19,,FALSE,FALSE,,OLAS
-,,FALSE,FALSE,OLA,OLAS
-Online provider,,FALSE,FALSE,,OLAS
-Service children's education,,FALSE,FALSE,,OLAS
-Offshore schools,,FALSE,FALSE,,OLAS
-British schools overseas,,FALSE,FALSE,,OLAS
-Institution funded by other government department,Specialist Designated College,FALSE,FALSE,,OLAS
-Miscellaneous,,FALSE,FALSE,,OLAS
-Miscellaneous,Specialist Designated College,FALSE,FALSE,,OLAS
+Secure units,,FALSE,FALSE,,SECU
+Academy secure 16 to 19,,FALSE,FALSE,,SECU
+Online provider,,FALSE,FALSE,,OTHE
+Service children's education,,FALSE,FALSE,,OTHE
+Offshore schools,,FALSE,FALSE,,OTHE
+British schools overseas,,FALSE,FALSE,,OTHE
+Institution funded by other government department,Specialist Designated College,FALSE,FALSE,,OTHE
+Miscellaneous,,FALSE,FALSE,,OTHE
+Miscellaneous,Specialist Designated College,FALSE,FALSE,,OTHE
+,,FALSE,FALSE,OLA,OLA
 ,,FALSE,FALSE,OPA,OPA
 ,,FALSE,FALSE,EHE,EHE
 ,,FALSE,FALSE,NEET,NEET
