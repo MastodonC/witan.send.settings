@@ -409,6 +409,7 @@
 
 ;;; ## GIAS Establishment Type to `:estab-cat`
 (def estab-type-keys [:type-of-establishment-name
+                      :further-education-type-name-applicable
                       :sen-unit-indicator
 	              :resourced-provision-indicator
 	              :sen-setting])
@@ -419,11 +420,12 @@
    :separator   ","
    :header-row? :true
    :key-fn      keyword
-   :parser-fn   {:type-of-establishment-name    :string
-	         :sen-unit-indicator            :boolean
-	         :resourced-provision-indicator :boolean
-	         :sen-setting                   :string
-	         :estab-cat                     :string}})
+   :parser-fn   {:type-of-establishment-name             :string
+                 :further-education-type-name-applicable :string
+	         :sen-unit-indicator                     :boolean
+	         :resourced-provision-indicator          :boolean
+	         :sen-setting                            :string
+	         :estab-cat                              :string}})
 
 (def estab-type-to-estab-cat-ds-col-names
   "Column names for estab-type-to-estab-cat dataset."
@@ -607,10 +609,11 @@
                                      (when sen-unit-indicator (str " " sen-unit-name))
                                      (when resourced-provision-indicator (str " " resourced-provision-name)))))
         ;; Derive estab-type from GIAS and sen2-estab info. Note this handles sen-setting too.
-        estab-type          {:type-of-establishment-name    (:type-of-establishment-name edubaseall-send)
-                             :sen-unit-indicator            sen-unit-indicator
-                             :resourced-provision-indicator resourced-provision-indicator
-                             :sen-setting                   sen-setting}
+        estab-type          {:type-of-establishment-name             (edubaseall-send :type-of-establishment-name)
+                             :further-education-type-name-applicable (edubaseall-send :further-education-type-name-applicable)
+                             :sen-unit-indicator                     sen-unit-indicator
+                             :resourced-provision-indicator          resourced-provision-indicator
+                             :sen-setting                            sen-setting}
         ;; Lookup estab-cat for this estab-type
         estab-cat-via-gias  (get (estab-type-to-estab-cat
                                   ::estab-type-to-estab-cat
