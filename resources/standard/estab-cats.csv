@@ -3,8 +3,8 @@ EYP,1,Early Years Provider (Non-maintained),Early Years Provider,"Early years pr
 EYS,2,LA Nursery School,Early Years School,From GIAS,FALSE,FALSE
 MsMdA,3,Mainstream Maintained Schools and Academies,Mainstream Maintained,Maintained mainstream schools (including foundation schools) and mainstream academies (including free schools).,FALSE,TRUE
 MsIn,4,Mainstream Independent Schools,Mainstream Independent,Independent mainstream schools.,FALSE,FALSE
-SENU,5,SEN Units,SEN Units,SEN Unit,TRUE,TRUE
-RP,6,Resourced Provision,Resourced Provision,Resourced provision in mainstream school.,TRUE,TRUE
+RP,5,Resourced Provision,Resourced Provision,Resourced provision in mainstream school.,TRUE,TRUE
+SENU,6,SEN Units,SEN Units,SEN Unit,TRUE,TRUE
 SpMdA,7,Maintained Special Schools and Academies,Maintained Special,Maintained special schools and academies.,TRUE,TRUE
 SpNm,8,Non-maintained Special Schools,Non-maintained Special,Non-maintained special schools.,TRUE,FALSE
 SpIn,9,Independent Special Schools,Independent Special,Independent special schools.,TRUE,FALSE
