@@ -609,8 +609,8 @@
                                      (when sen-unit-indicator (str " " sen-unit-name))
                                      (when resourced-provision-indicator (str " " resourced-provision-name)))))
         ;; Derive estab-type from GIAS and sen2-estab info. Note this handles sen-setting too.
-        estab-type          {:type-of-establishment-name             (edubaseall-send :type-of-establishment-name)
-                             :further-education-type-name-applicable (edubaseall-send :further-education-type-name-applicable)
+        estab-type          {:type-of-establishment-name             (get edubaseall-send :type-of-establishment-name)
+                             :further-education-type-name-applicable (get edubaseall-send :further-education-type-name-applicable)
                              :sen-unit-indicator                     sen-unit-indicator
                              :resourced-provision-indicator          resourced-provision-indicator
                              :sen-setting                            sen-setting}
