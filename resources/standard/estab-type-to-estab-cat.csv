@@ -1,62 +1,74 @@
-type-of-establishment-name,sen-unit-indicator,resourced-provision-indicator,sen-setting,estab-cat
-,FALSE,FALSE,EYP,EYP
-Local authority nursery school,FALSE,FALSE,,EYS
-Community school,FALSE,FALSE,,MsMdA
-Voluntary aided school,FALSE,FALSE,,MsMdA
-Voluntary controlled school,FALSE,FALSE,,MsMdA
-Foundation school,FALSE,FALSE,,MsMdA
-Academy sponsor led,FALSE,FALSE,,MsMdA
-Academy converter,FALSE,FALSE,,MsMdA
-Free schools,FALSE,FALSE,,MsMdA
-Studio schools,FALSE,FALSE,,MsMdA
-Other independent school,FALSE,FALSE,,MsIn
-Community school,TRUE,FALSE,,SENU
-Voluntary aided school,TRUE,FALSE,,SENU
-Voluntary controlled school,TRUE,FALSE,,SENU
-Foundation school,TRUE,FALSE,,SENU
-Academy sponsor led,TRUE,FALSE,,SENU
-Academy converter,TRUE,FALSE,,SENU
-Free schools,TRUE,FALSE,,SENU
-Studio schools,TRUE,FALSE,,SENU
-Community school,FALSE,TRUE,,RP
-Voluntary aided school,FALSE,TRUE,,RP
-Voluntary controlled school,FALSE,TRUE,,RP
-Foundation school,FALSE,TRUE,,RP
-Academy sponsor led,FALSE,TRUE,,RP
-Academy converter,FALSE,TRUE,,RP
-Free schools,FALSE,TRUE,,RP
-Studio schools,FALSE,TRUE,,RP
-Community special school,FALSE,FALSE,,SpMdA
-Foundation special school,FALSE,FALSE,,SpMdA
-Academy special sponsor led,FALSE,FALSE,,SpMdA
-Academy special converter,FALSE,FALSE,,SpMdA
-Free schools special,FALSE,FALSE,,SpMdA
-Non-maintained special school,FALSE,FALSE,,SpNm
-Other independent special school,FALSE,FALSE,,SpIn
-Pupil referral unit,FALSE,FALSE,,APRU
-Academy alternative provision sponsor led,FALSE,FALSE,,APRU
-Academy alternative provision converter,FALSE,FALSE,,APRU
-Free schools alternative provision,FALSE,FALSE,,APRU
-Academy 16-19 converter,FALSE,FALSE,,6FC
-Academy 16 to 19 sponsor led,FALSE,FALSE,,6FC
-Free schools 16 to 19,FALSE,FALSE,,6FC
-Sixth form centres,FALSE,FALSE,,6FC
-City technology college,FALSE,FALSE,,GFE
-Further education,FALSE,FALSE,,GFE
-Higher education institutions,FALSE,FALSE,,GFE
-University technical college,FALSE,FALSE,,GFE
-Special post 16 institution,FALSE,FALSE,,SP16
-Secure units,FALSE,FALSE,,OLAS
-,FALSE,FALSE,OLA,OLAS
-Online provider,FALSE,FALSE,,OLAS
-Service children's education,FALSE,FALSE,,OLAS
-Offshore schools,FALSE,FALSE,,OLAS
-British schools overseas,FALSE,FALSE,,OLAS
-Institution funded by other government department,FALSE,FALSE,,OLAS
-Miscellaneous,FALSE,FALSE,,OLAS
-,FALSE,FALSE,OPA,OPA
-,FALSE,FALSE,EHE,EHE
-,FALSE,FALSE,NEET,NEET
-,FALSE,FALSE,NIEC,NIEC
-,FALSE,FALSE,NIEO,NIEO
-,FALSE,FALSE,OTH,OTH
+type-of-establishment-name,further-education-type-name-applicable,sen-unit-indicator,resourced-provision-indicator,sen-setting,estab-cat
+,,FALSE,FALSE,EYP,EYP
+Local authority nursery school,,FALSE,FALSE,,EYS
+Community school,,FALSE,FALSE,,MsMdA
+Voluntary aided school,,FALSE,FALSE,,MsMdA
+Voluntary controlled school,,FALSE,FALSE,,MsMdA
+Foundation school,,FALSE,FALSE,,MsMdA
+Academy sponsor led,,FALSE,FALSE,,MsMdA
+Academy converter,,FALSE,FALSE,,MsMdA
+Free schools,,FALSE,FALSE,,MsMdA
+Studio schools,,FALSE,FALSE,,MsMdA
+Other independent school,,FALSE,FALSE,,MsIn
+Community school,,TRUE,FALSE,,SENU
+Voluntary aided school,,TRUE,FALSE,,SENU
+Voluntary controlled school,,TRUE,FALSE,,SENU
+Foundation school,,TRUE,FALSE,,SENU
+Academy sponsor led,,TRUE,FALSE,,SENU
+Academy converter,,TRUE,FALSE,,SENU
+Free schools,,TRUE,FALSE,,SENU
+Studio schools,,TRUE,FALSE,,SENU
+Community school,,FALSE,TRUE,,RP
+Voluntary aided school,,FALSE,TRUE,,RP
+Voluntary controlled school,,FALSE,TRUE,,RP
+Foundation school,,FALSE,TRUE,,RP
+Academy sponsor led,,FALSE,TRUE,,RP
+Academy converter,,FALSE,TRUE,,RP
+Free schools,,FALSE,TRUE,,RP
+Studio schools,,FALSE,TRUE,,RP
+Community special school,,FALSE,FALSE,,SpMdA
+Foundation special school,,FALSE,FALSE,,SpMdA
+Academy special sponsor led,,FALSE,FALSE,,SpMdA
+Academy special converter,,FALSE,FALSE,,SpMdA
+Free schools special,,FALSE,FALSE,,SpMdA
+Non-maintained special school,,FALSE,FALSE,,SpNm
+Other independent special school,,FALSE,FALSE,,SpIn
+Pupil referral unit,,FALSE,FALSE,,APRU
+Academy alternative provision sponsor led,,FALSE,FALSE,,APRU
+Academy alternative provision converter,,FALSE,FALSE,,APRU
+Free schools alternative provision,,FALSE,FALSE,,APRU
+Academy 16-19 converter,,FALSE,FALSE,,6FC
+Academy 16 to 19 sponsor led,,FALSE,FALSE,,6FC
+Free schools 16 to 19,,FALSE,FALSE,,6FC
+Sixth form centres,,FALSE,FALSE,,6FC
+Further education,Sixth Form College (General),FALSE,FALSE,,6FC
+Further education,Sixth Form College (Voluntary Aided),FALSE,FALSE,,6FC
+Further education,Sixth Form College (Voluntary Controlled),FALSE,FALSE,,6FC
+Further education,,FALSE,FALSE,,GFE
+Further education,"Art, Design and Performing Arts College",FALSE,FALSE,,GFE
+Further education,General Further Education College,FALSE,FALSE,,GFE
+Further education,Land-Based College,FALSE,FALSE,,GFE
+Further education,Specialist Designated College,FALSE,FALSE,,GFE
+Further education,Tertiary College,FALSE,FALSE,,GFE
+City technology college,,FALSE,FALSE,,GFE
+Higher education institutions,,FALSE,FALSE,,GFE
+Higher education institutions,"Art, Design and Performing Arts College",FALSE,FALSE,,GFE
+University technical college,,FALSE,FALSE,,GFE
+Special post 16 institution,,FALSE,FALSE,,SP16
+Special post 16 institution,Specialist Designated College,FALSE,FALSE,,SP16
+Secure units,,FALSE,FALSE,,SECU
+Academy secure 16 to 19,,FALSE,FALSE,,SECU
+Online provider,,FALSE,FALSE,,OTHE
+Service children's education,,FALSE,FALSE,,OTHE
+Offshore schools,,FALSE,FALSE,,OTHE
+British schools overseas,,FALSE,FALSE,,OTHE
+Institution funded by other government department,Specialist Designated College,FALSE,FALSE,,OTHE
+Miscellaneous,,FALSE,FALSE,,OTHE
+Miscellaneous,Specialist Designated College,FALSE,FALSE,,OTHE
+,,FALSE,FALSE,OLA,OLA
+,,FALSE,FALSE,OPA,OPA
+,,FALSE,FALSE,EHE,EHE
+,,FALSE,FALSE,NEET,NEET
+,,FALSE,FALSE,NIEC,NIEC
+,,FALSE,FALSE,NIEO,NIEO
+,,FALSE,FALSE,OTH,OTH
