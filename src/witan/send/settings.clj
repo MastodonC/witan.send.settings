@@ -202,7 +202,7 @@
 
 ;;; ## Settings
 ;; Combining `:estab-cat`, `:designation` and `:area`:
-(def settings-ds-cols
+(def settings-ds-col-names
   "Column names for settings dataset."
   (for [prefix           [nil "estab-cat" "designation" "area"]
         base-ds-col-name base-def-ds-col-names]
@@ -271,7 +271,7 @@
                                                      designation-definition)
                                                     "."))}))))
         ;; Tidy dataset
-        (tc/select-columns settings-ds-cols)
+        (tc/select-columns settings-ds-col-names)
         (tc/set-dataset-name "settings"))))
 
 (defn settings-ds
@@ -280,7 +280,7 @@
   [& {settings' ::settings
       :as       cfg}]
   (let [ds-template      (tc/dataset nil {:dataset-name "settings"
-                                          :column-names settings-ds-cols})]
+                                          :column-names settings-ds-col-names})]
     (cond
       (nil? settings')        (-> cfg
                                   cfg->settings-ds)
