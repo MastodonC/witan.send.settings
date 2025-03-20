@@ -223,7 +223,7 @@
         estab-cats-ds'           (estab-cats-ds ::estab-cats estab-cats')
         designations-ds'         (designations-ds ::designations designations')
         areas-ds'                (areas-ds ::areas areas')]
-    ;; FIXME: Drops estab-cats if should be designated|splie-area but no designations|areas (which is a config error).
+    ;; FIXME: Drops estab-cats if should be designated|split-area but no designations|areas (which is a config error).
     ;; TODO: Only construct name|label|definition if have all components needed (i.e. need area if :estab-cat-split-area).
     (-> estab-cats-ds'
         (tc/rename-columns (prepend-str-to-keyword-f "estab-cat"))
