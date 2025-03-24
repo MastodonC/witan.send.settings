@@ -202,14 +202,33 @@
 
 ;;; ## Settings
 ;; Combining `:estab-cat`, `:designation` and `:area`:
-(def settings-ds-cols
+(def settings-ds-col-name-prefixes
+  "Column name prefixes for settings dataset."
+  [nil "estab-cat" "designation" "area"])
+
+(def settings-ds-col-names
   "Column names for settings dataset."
-  (for [prefix           [nil "estab-cat" "designation" "area"]
+  (for [prefix           settings-ds-col-name-prefixes
         base-ds-col-name base-def-ds-col-names]
     (->> base-ds-col-name
          name
          (str prefix (when prefix "-"))
          keyword)))
+
+(def settings-csv-read-options
+  "Options for `ds/->dataset` read of setting definition CSV files."
+  (update-in base-def-csv-read-options
+             [:parser-fn]
+             (fn [parser-fn-map col-name-prefixes]
+               (reduce (fn [m col-name-prefix]
+                         (merge m
+                                (update-keys parser-fn-map
+                                             (comp keyword
+                                                   (partial str col-name-prefix (when col-name-prefix "-"))
+                                                   name))))
+                       {}
+                       col-name-prefixes))
+             settings-ds-col-name-prefixes))
 
 (defn cfg->settings-ds
   "Derive dataset of setting abbreviations and attributes from:
@@ -223,7 +242,7 @@
         estab-cats-ds'           (estab-cats-ds ::estab-cats estab-cats')
         designations-ds'         (designations-ds ::designations designations')
         areas-ds'                (areas-ds ::areas areas')]
-    ;; FIXME: Drops estab-cats if should be designated|splie-area but no designations|areas (which is a config error).
+    ;; FIXME: Drops estab-cats if should be designated|split-area but no designations|areas (which is a config error).
     ;; TODO: Only construct name|label|definition if have all components needed (i.e. need area if :estab-cat-split-area).
     (-> estab-cats-ds'
         (tc/rename-columns (prepend-str-to-keyword-f "estab-cat"))
@@ -271,37 +290,37 @@
                                                      designation-definition)
                                                     "."))}))))
         ;; Tidy dataset
-        (tc/select-columns settings-ds-cols)
+        (tc/select-columns settings-ds-col-names)
         (tc/set-dataset-name "settings"))))
 
 (defn settings-ds
-  "Dataset of setting abbreviations and attributes.
-   Derived from estab-cat, designation & area definitions unless specified in truthy `::settings` val."
-  [& {settings' ::settings
-      :as       cfg}]
-  (let [ds-template      (tc/dataset nil {:dataset-name "settings"
-                                          :column-names settings-ds-cols})]
+  "Return `settings` dataset extracted/derived from `::estab-cats`, `::designations` & `::areas`
+   unless specified in truthy `::settings` key as follows:
+   - value a map: dataset reconstructed from map
+   - value a dataset: returned as-is
+   - value a string: file at that path read as dataset"
+  [& {::keys [settings] :as cfg}]
+  (let [ds-template (tc/dataset nil {:dataset-name "settings"
+                                     :column-names settings-ds-col-names})]
     (cond
-      (nil? settings')        (-> cfg
-                                  cfg->settings-ds)
-      (tc/dataset? settings') settings'
-      (map? settings')        (tc/concat-copying ds-template
-                                                 (map->ds settings' :keys-col-name :abbreviation))
+      (nil? settings)        (cfg->settings-ds cfg)
+      (string? settings)     (resource-or-file->dataset settings settings-csv-read-options)
+      (tc/dataset? settings) settings
+      (map? settings)        (tc/concat-copying ds-template (map->ds settings :keys-col-name :abbreviation))
       :else                   ds-template)))
 
 (defn settings
-  "Map setting abbreviations to attributes.
-   Derived from estab-cat, designation & area definitions unless specified in truthy `::settings` val."
-  [& {settings' ::settings
-      :as       cfg}]
-  (cond
-    (nil? settings')        (-> cfg
-                                (cfg->settings-ds)
-                                (ds->sorted-map-by :abbreviation {:order-col :order}))
-    (tc/dataset? settings') (-> settings'
-                                (ds->sorted-map-by :abbreviation {:order-col :order}))
-    (map? settings')        settings'
-    :else                   {}))
+  "Return `settings` map extracted/derived from `::estab-cats`, `::designations` & `::areas`
+   unless specified in truthy `::settings` key as follows:
+   - value a map: map returned as-is
+   - value a dataset: made into a map keyed on `:abbreviation`
+   - value a string: file at that path read as dataset and made into a map keyed on `:abbreviation`"
+  [& {::keys [settings] :as cfg}]
+  (as-> settings $
+    (if (nil? $)        (cfg->settings-ds cfg) $)
+    (if (string? $)     (settings-ds cfg) $)
+    (if (tc/dataset? $) (ds->sorted-map-by $ :abbreviation {:order-col :order}) $)
+    (if (map? $)        $ {})))
 
 (defn setting-components-regex
   "Return regex pattern for splitting setting abbreviations into components.
@@ -519,6 +538,7 @@
                     ::estab-cats                   (parse-string-v k v estab-cats-ds)
                     ::designations                 (parse-string-v k v designations-ds)
                     ::areas                        (parse-string-v k v areas-ds)
+                    ::settings                     (parse-string-v k v settings-ds)
                     ::sen2-estab-settings-manual   (parse-string-v k v sen2-estab-settings-manual-ds)
                     ::sen2-estab-settings-override (parse-string-v k v sen2-estab-settings-override-ds)
                     ::estab-type-to-estab-cat      (parse-string-v k v estab-type-to-estab-cat-ds)
