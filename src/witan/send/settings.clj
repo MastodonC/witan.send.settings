@@ -598,8 +598,8 @@
               sen-unit-name
               resourced-provision-name]
       :or    {edubaseall-send-map      {}
-              designation-f            (fn [& args] nil)
-              area-split-f             (fn [& args] nil)
+              designation-f            (constantly nil)
+              area-split-f             (constantly nil)
               in-area-la-codes         #{}
               sen-unit-name            "(SEN Unit)"
               resourced-provision-name "(Resourced Provision)"}
