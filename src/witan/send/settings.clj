@@ -1,7 +1,7 @@
 (ns witan.send.settings
   "Define and assign tri-part establishment settings for witan SEND modelling."
   (:require [clojure.java.io :as io]
-            [clojure.string  :as string]
+            [clojure.string  :as str]
             [tablecloth.api  :as tc]
             [tech.v3.dataset :as ds]
             [witan.gias :as gias]))
@@ -13,7 +13,7 @@
    Paths beginning \"resources/\" are interpreted as resources."
   [filepath options]
   (with-open [in (-> (if (re-find #"^resources/" filepath)
-                       (io/resource (string/replace filepath #"^resources/" "" ))
+                       (io/resource (str/replace filepath #"^resources/" "" ))
                        filepath)
                      io/file
                      io/input-stream)]
@@ -260,7 +260,7 @@
                                                       (tc/rename-columns (prepend-str-to-keyword-f "area")))))))
         ;; Derive setting `:abbreviation`
         (tc/map-columns :abbreviation [:estab-cat-abbreviation :designation-abbreviation :area-abbreviation]
-                        (fn [& args] (string/join "_" (filter some? args))))
+                        (fn [& args] (str/join "_" (filter some? args))))
         (tc/order-by [:estab-cat-order :designation-order :area-order])
         (tc/add-column :order (iterate inc 1))
         ;; Derive setting attributes from corresponding estab-cat, designation & area attributes (if available)
@@ -268,9 +268,9 @@
                                   estab-cat-label      designation-label      area-label
                                   estab-cat-definition designation-definition area-definition]}]
                        (merge (when estab-cat-name
-                                {:name (string/join " " (filter some? [area-name
-                                                                       estab-cat-name
-                                                                       designation-name]))})
+                                {:name (str/join " " (filter some? [area-name
+                                                                    estab-cat-name
+                                                                    designation-name]))})
                               (when estab-cat-label
                                 {:label (str estab-cat-label
                                              (when area-label
@@ -280,10 +280,10 @@
                               (when estab-cat-definition
                                 {:definition (str (when area-definition
                                                     (-> area-definition
-                                                        (string/replace #".$" "")
+                                                        (str/replace #".$" "")
                                                         (str " ")))
                                                   (-> estab-cat-definition
-                                                      (string/replace #".$" ""))
+                                                      (str/replace #".$" ""))
                                                   (if designation-definition
                                                     (format
                                                      "; providing for (designation group) %s"
@@ -336,7 +336,8 @@
                                     (keys (areas cfg)))]
         (re-pattern (str "^(?<estabCat>[^_]+)"
                          "_??(?<designation>[^_]+)??"
-                         "_?(?<area>" (string/join "|" area-abbreviations') ")?$")))))
+                         "_?(?<area>" (str/join "|" area-abbreviations') ")?$")))))
+
 
 (defn setting->components
   "Given `setting` abbreviation and `setting-components-regex`, returns map of setting components."
@@ -671,7 +672,7 @@
                                                   (when (not-any? boolean (vals sen2-estab)) "UKN") ; Only possible if estab-cat "UKN" designated!?
                                                   "XxX")) ; Avoid "XxX" via manual, area-split-f, or override.
         ;; Derive setting from estab-cat, designation and area abbreviations
-        setting             (string/join "_" (filter some? [estab-cat designation area]))]
+        setting             (str/join "_" (filter some? [estab-cat designation area]))]
     {:sen2-estab          sen2-estab
      :override            override
      :edubaseall-send     edubaseall-send
