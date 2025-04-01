@@ -358,6 +358,24 @@
      :designation designation
      :area        area}))
 
+(defn designation-component-regex
+  "Return regex pattern for extracting designation component.
+   Relies on area abbreviations not clashing with designation abbreviations.
+   Collection of areas can be specified (first supplied is used):
+   - directly via `:area-abbreviations` key
+   - via ::areas defined in settings cfg (via `(areas cfg)`)."
+  [& {designation-components-regex' ::designation-components-regex
+      area-abbreviations            :area-abbreviations ; Note deliberately NOT namespaced
+      :as                           cfg}]
+  (or designation-components-regex'
+      (let [area-abbreviations' (or area-abbreviations
+                                    (keys (areas cfg)))]
+        (re-pattern (str "(?<=_)"                                        ; positive lookbehind for an underscore
+                         "(?!(" (str/join "|" area-abbreviations') ")$)" ; negative lookahead for area-abbreviations
+                         "([^_]+)"                                       ; one or more chars except underscores
+                         )))))
+
+
 
 ;;; # Setting mappings
 (def sen2-estab-keys
