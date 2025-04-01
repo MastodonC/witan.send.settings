@@ -338,7 +338,6 @@
                          "_??(?<designation>[^_]+)??"
                          "_?(?<area>" (str/join "|" area-abbreviations') ")?$")))))
 
-
 (defn setting->components
   "Given `setting` abbreviation and `setting-components-regex`, returns map of setting components."
   [setting setting-components-regex]
@@ -349,6 +348,15 @@
      :designation designation
      :area        area}))
 
+(defn setting-components
+  "Returns map of setting components extracted from `setting` abbreviation."
+  [setting & {:as cfg}]
+  (let [[setting estab-cat designation area]
+        (re-find (setting-components-regex cfg) setting)]
+    {:setting     setting
+     :estab-cat   estab-cat
+     :designation designation
+     :area        area}))
 
 
 ;;; # Setting mappings
