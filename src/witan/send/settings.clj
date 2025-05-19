@@ -322,6 +322,44 @@
     (if (tc/dataset? $) (ds->sorted-map-by $ :abbreviation {:order-col :order}) $)
     (if (map? $)        $ {})))
 
+(defn settings-csv->settings-cfg
+  "Read `settings` dataset from CSV file, extract `estab-cats`, `designations` and `areas` datasets,
+   and returns in namespaced map."
+  [settings-csv-filepath]
+  (let [rename-component-columns  (fn [ds component]
+                                    (-> ds
+                                        (tc/rename-columns #(-> %
+                                                                name
+                                                                (str/replace (re-pattern (str "^" component "-")) "")
+                                                                keyword))))
+        settings-ds->component-ds (fn [ds component]
+                                    (-> ds
+                                        (tc/select-columns (re-pattern (str ":" component "-.+$")))
+                                        (rename-component-columns component)
+                                        (tc/drop-missing [:abbreviation])
+                                        (tc/unique-by [:abbreviation] {:strategy :first})
+                                        (tc/set-dataset-name (str component "s"))))
+        settings-ds               (-> settings-csv-filepath
+                                      (resource-or-file->dataset settings-csv-read-options))
+        estab-cat-splits          (-> settings-ds
+                                      (tc/group-by [:estab-cat-abbreviation])
+                                      (tc/aggregate {:designate?  #(->> % :designation-abbreviation (not-every? nil?))
+                                                     :split-area? #(->> % :area-abbreviation        (not-every? nil?))})
+                                      (rename-component-columns "estab-cat"))
+        estab-cats-ds             (-> settings-ds
+                                      (settings-ds->component-ds "estab-cat")
+                                      (tc/left-join estab-cat-splits [:abbreviation])
+                                      (tc/drop-columns [:right.abbreviation])
+                                      (tc/set-dataset-name "estab-cats"))
+        designations-ds           (-> settings-ds
+                                      (settings-ds->component-ds "designation"))
+        areas-ds                  (-> settings-ds
+                                      (settings-ds->component-ds "area"))]
+    {::settings     settings-ds
+     ::estab-cats   estab-cats-ds
+     ::designations designations-ds
+     ::areas        areas-ds}))
+
 (defn setting-components-regex
   "Return regex pattern for splitting setting abbreviations into components.
    Relies on area abbreviations not clashing with designation abbreviations.
