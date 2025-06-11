@@ -506,10 +506,10 @@
    :key-fn      keyword
    :parser-fn   {:type-of-establishment-name             :string
                  :further-education-type-name-applicable :string
-	         :sen-unit-indicator                     :boolean
-	         :resourced-provision-indicator          :boolean
-	         :sen-setting                            :string
-	         :estab-cat                              :string}})
+                 :sen-unit-indicator                     :boolean
+                 :resourced-provision-indicator          :boolean
+                 :sen-setting                            :string
+                 :estab-cat                              :string}})
 
 (def estab-type-to-estab-cat-ds-col-names
   "Column names for estab-type-to-estab-cat dataset."
