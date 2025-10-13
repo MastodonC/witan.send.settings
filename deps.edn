@@ -1,12 +1,12 @@
 {:paths   ["src" "resources"]
- :deps    {org.clojure/clojure            {:mvn/version "1.11.1"}
-           techascent/tech.ml.dataset     {:mvn/version "7.029"}
-           scicloj/tablecloth             {:mvn/version "7.029.2"
-                                           :exclusions  [techascent/tech.ml.dataset
-                                                         org.apache.poi/poi-ooxml-schemas
-                                                         org.apache.poi/poi
-                                                         org.apache.poi/poi-ooxml]}
-           io.github.MastodonC/witan.gias {:git/sha "aaecb96d94a5e7a6b2d3aa36c617570d897f2d9c"}}
+ :deps    {org.clojure/clojure             {:mvn/version "1.11.1"}
+           techascent/tech.ml.dataset      {:mvn/version "7.029"}
+           scicloj/tablecloth              {:mvn/version "7.029.2"
+                                            :exclusions  [techascent/tech.ml.dataset
+                                                          org.apache.poi/poi-ooxml-schemas
+                                                          org.apache.poi/poi
+                                                          org.apache.poi/poi-ooxml]}
+           com.github.MastodonC/witan.gias {:git/sha "cb97edb2c10fd7bc2daeff1c090a17999baeb611"}}
  :aliases {:dev {:extra-paths ["notebooks" "dev"]
                  :extra-deps  {;; Clerk only required to run the demo notebooks. Not required by src namespaces.
                                io.github.nextjournal/clerk {:mvn/version "0.15.957"}}}}}
