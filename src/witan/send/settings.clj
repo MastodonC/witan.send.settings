@@ -413,6 +413,11 @@
                          "([^_]+)"                                       ; one or more chars except underscores
                          )))))
 
+(defn setting->setting-*
+  "Return setting abbreviation `setting` with designation component replaced by a \"*\"."
+  [setting & {:as cfg}]
+  (str/replace setting (designation-component-regex cfg) "*"))
+
 
 
 ;;; # Setting mappings
