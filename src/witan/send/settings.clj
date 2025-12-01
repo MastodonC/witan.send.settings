@@ -413,6 +413,11 @@
                          "([^_]+)"                                       ; one or more chars except underscores
                          )))))
 
+(defn setting->setting-*
+  "Return setting abbreviation `setting` with designation component replaced by a \"*\"."
+  [setting & {:as cfg}]
+  (str/replace setting (designation-component-regex cfg) "*"))
+
 
 
 ;;; # Setting mappings
@@ -621,16 +626,21 @@
    (parse-cfg-files cfg)
    (when (nil? edubaseall-send-map) {::edubaseall-send-map (gias/edubaseall-send->map cfg)})))
 
+(def standard-cfg-file-names
+  "Configuration keys for standard settings CSV file names (without location)."
+  {::estab-cats                   "estab-cats.csv"
+   ::designations                 "designations.csv"
+   ::areas                        "areas.csv"
+   ::sen2-estab-settings-manual   "sen2-estab-settings-manual.csv"
+   ::sen2-estab-settings-override "sen2-estab-settings-override.csv"
+   ::estab-type-to-estab-cat      "estab-type-to-estab-cat.csv"})
+
 (def standard-cfg-files
   "Configuration keys for standard settings CSV files."
-  {::estab-cats                   "resources/standard/estab-cats.csv"
-   ::designations                 "resources/standard/designations.csv"
-   ::areas                        "resources/standard/areas.csv"
-   ::sen2-estab-settings-manual   "resources/standard/sen2-estab-settings-manual.csv"
-   ::sen2-estab-settings-override "resources/standard/sen2-estab-settings-override.csv"
-   ::estab-type-to-estab-cat      "resources/standard/estab-type-to-estab-cat.csv"
-   ::designation-f                standard-designation
-   ::area-split-f                 standard-area-split})
+  (merge (update-vals standard-cfg-file-names
+                      (partial str "resources/standard/"))
+         {::designation-f standard-designation
+          ::area-split-f  standard-area-split}))
 
 (defn standard-cfg
   "Standard settings config, including GIAS `::edubaseall-send-map`."
